@@ -10,6 +10,7 @@ public class CameraController : MonoBehaviour
     public GameObject gameObj;
     public Camera cam;
     public Vector3 position;
+    public TMPro.TextMeshProUGUI scaleText;
     // Start is called before the first frame update
     void Start()
     {
@@ -45,5 +46,6 @@ public class CameraController : MonoBehaviour
         }
         cam.orthographicSize = Mathf.Clamp(cam.orthographicSize,1,10000);
         gameObj.transform.position=position;
+        scaleText.text=((float)((int)(cam.orthographicSize/181f))/4).ToString()+"x";
     }
 }

@@ -6,6 +6,7 @@ public class NodeEnt : MonoBehaviour
 {
     public Color myColor = Color.white;
     public List<PathEnt> myPaths;
+    public List<Road> myRoads;
     // Start is called before the first frame update
     void Start()
     {
@@ -21,6 +22,11 @@ public class NodeEnt : MonoBehaviour
     public void AddPath(PathEnt newPath)
     {
         myPaths.Add(newPath);
+    }
+
+    public void AddRoad(Road newRoad)
+    {
+        myRoads.Add(newRoad);
     }
 
     public void UpdateColor(Color color)

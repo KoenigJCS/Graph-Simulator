@@ -12,9 +12,11 @@ public class PlacementMgr : MonoBehaviour
     public GameObject path;
     Color placeColor;
     public static PlacementMgr inst;
-    public TMPro.TextMeshProUGUI lengthInputText;
     public GameObject inputMenu;
+    public GameObject configMenu;
     int lengthCount = 0;
+    public bool pathRender = false;
+    public TMPro.TextMeshProUGUI lengthInputText;
     void Awake()
     {
         inst = this;
@@ -24,6 +26,7 @@ public class PlacementMgr : MonoBehaviour
     {
         placeColor=Color.red;
         inputMenu.SetActive(false);
+        configMenu.SetActive(false);
     }
     public GameObject targetedPath = null;
     PathEnt curPath = null;
@@ -55,7 +58,7 @@ public class PlacementMgr : MonoBehaviour
                 {
                     EntMgr.inst.AddNode(Instantiate(node,worldPoint,Quaternion.identity,entContainer).GetComponent<NodeEnt>());
                 }
-                else if(summonObjectType==2 && hit.collider != null)
+                else if(summonObjectType==2 && hit.collider != null && pathRender)
                 {
                     targetedPath = Instantiate(path,hit.collider.transform.position,Quaternion.identity,entContainer);
                     targetedPath.GetComponent<PathEnt>().aNode=hit.transform.GetComponent<NodeEnt>();
@@ -131,10 +134,29 @@ public class PlacementMgr : MonoBehaviour
         }
         if(Input.GetMouseButton(0))
         {
+            if(placementMode==5 && !EntMgr.inst.algoritmOnline)
+            {
+                Vector2 worldPoint = Camera.main.ScreenToWorldPoint( Input.mousePosition );
+                int mask = 1 << 6;
+                RaycastHit2D hit = Physics2D.Raycast(worldPoint, Vector2.zero,Mathf.Infinity,mask);
+                if(hit.collider != null)
+                {
+                    NodeEnt deletedNode = hit.transform.GetComponent<NodeEnt>();
+                    EntMgr.inst.nodeList.Remove(deletedNode);
+                    foreach (NodeEnt singleNode in EntMgr.inst.nodeList)
+                    {
+                        Road tempRoad = new Road(deletedNode,singleNode);
+                        if(EntMgr.inst.roadDict.ContainsKey(tempRoad))
+                            EntMgr.inst.roadDict.Remove(tempRoad);
+                        else if(EntMgr.inst.roadDict.ContainsKey(tempRoad.Swap()))
+                            EntMgr.inst.roadDict.Remove(tempRoad.Swap());
+                    }
+                    Destroy(deletedNode.gameObject);
+                }
+            }
             if(targetedPath!=null)
             {
                 Vector2 worldPoint = Camera.main.ScreenToWorldPoint( Input.mousePosition );
-                Debug.Log(worldPoint);
                 int mask = 1 << 6;
                 RaycastHit2D hit = Physics2D.Raycast(worldPoint, Vector2.zero,Mathf.Infinity,mask);
                 if(hit.collider == null)
@@ -159,7 +181,6 @@ public class PlacementMgr : MonoBehaviour
         if(Input.GetMouseButtonUp(0))
         {
             Vector2 worldPoint = Camera.main.ScreenToWorldPoint( Input.mousePosition );
-            Debug.Log(worldPoint);
             int mask = 1 << 6;
             RaycastHit2D hit = Physics2D.Raycast(worldPoint, Vector2.zero,Mathf.Infinity,mask);
             if(hit.collider == null)
@@ -167,22 +188,29 @@ public class PlacementMgr : MonoBehaviour
                 if(targetedPath!=null)
                 {
                     targetedPath.GetComponent<PathEnt>().aNode.myPaths.Remove(targetedPath.GetComponent<PathEnt>());
+                    EntMgr.inst.pathList.Remove(targetedPath.GetComponent<PathEnt>());
                     Destroy(targetedPath);
                 }
             }
-            else
+            else if(targetedPath!=null)
             {
                 NodeEnt bNode = hit.transform.GetComponent<NodeEnt>();
-                if(targetedPath.GetComponent<PathEnt>().aNode==bNode)
+                PathEnt tempPath = targetedPath.GetComponent<PathEnt>();
+                tempPath.bNode=bNode;
+                Road tempRoad = new Road(tempPath.aNode,tempPath.bNode);
+                //Route tempRoute = new Route(tempPath.aNode,tempPath.bNode,tempPath.length);
+                if(EntMgr.inst.roadDict.ContainsKey(tempRoad) || EntMgr.inst.roadDict.ContainsKey(tempRoad.Swap()))
                 {
                     targetedPath.GetComponent<PathEnt>().aNode.myPaths.Remove(targetedPath.GetComponent<PathEnt>());
+                    EntMgr.inst.pathList.Remove(targetedPath.GetComponent<PathEnt>());
                     Destroy(targetedPath);
                 }
                 else
                 {
-                    targetedPath.GetComponent<PathEnt>().bNode=bNode;
-                    bNode.AddPath(targetedPath.GetComponent<PathEnt>());
-                    targetedPath.GetComponent<PathEnt>().UpdateColor();
+                    EntMgr.inst.AddRoadToDict(tempRoad,tempPath.length);
+                    tempPath.UpdateLength(Mathf.RoundToInt((tempPath.aNode.transform.position-bNode.transform.position).magnitude));
+                    bNode.AddPath(tempPath);
+                    tempPath.UpdateColor();
                 }
             }
             targetedPath=null;
@@ -191,6 +219,7 @@ public class PlacementMgr : MonoBehaviour
 
     public void SetColor(int newColor)
     {
+        placementMode=2;
         switch (newColor)
         {
             case 1:
@@ -209,6 +238,7 @@ public class PlacementMgr : MonoBehaviour
 
     public void SetSummon(int objectType)
     {
+        placementMode=1;
         summonObjectType=objectType; 
     }
 
@@ -220,5 +250,25 @@ public class PlacementMgr : MonoBehaviour
     bool IsMouseOverUI()
     {
         return EventSystem.current.IsPointerOverGameObject();
+    }
+
+    public void ToggleMenu()
+    {
+        configMenu.SetActive(!configMenu.activeSelf);
+    }
+
+    public void AddAllPaths()
+    {
+
+    }
+
+    public void SetPathRender( bool state)
+    {
+        pathRender=state;
+        if(!pathRender)
+            EntMgr.inst.CleanUpPaths();
+        else
+            EntMgr.inst.DeployPaths();
+        
     }
 }

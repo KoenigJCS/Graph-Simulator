@@ -36,13 +36,15 @@ public class PathEnt : MonoBehaviour
 
     public void UpdateLength(int newLength)
     {
-        if(lengthText.GetComponent<Transform>().eulerAngles.z<180 && lengthText.GetComponent<Transform>().eulerAngles.z>0)
-        {
-            Vector3 rotate = new Vector3(0,0,180);
-            Transform tempT = lengthText.GetComponent<Transform>();
-            tempT.Rotate(rotate,Space.World);
-        }
+        // if(this.transform.eulerAngles.z>0 && this.transform.eulerAngles.z<180)
+        // {
+        //     Vector3 rotate = new Vector3(0,0,180);
+        //     Transform tempT = lengthText.GetComponent<Transform>();
+        //     tempT.Rotate(rotate,Space.World);
+        // }
         length=newLength;
-        lengthText.text=newLength.ToString();
+        //lengthText.text=newLength.ToString();
     }
+
+    
 }
