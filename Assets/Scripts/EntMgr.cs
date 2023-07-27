@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
+[Serializable]
 public struct Road
 {
     public NodeEnt startNode;
@@ -46,7 +48,42 @@ public struct Road
         return swappedRoad;
     }
 }
-public class Map<TKey,TValue> : Dictionary<TKey,TValue>
+[Serializable]
+public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ISerializationCallbackReceiver
+{
+	[SerializeField]
+	private List<TKey> keys = new List<TKey>();
+	
+	[SerializeField]
+	private List<TValue> values = new List<TValue>();
+	
+	// save the dictionary to lists
+	public void OnBeforeSerialize()
+	{
+		keys.Clear();
+		values.Clear();
+		foreach(KeyValuePair<TKey, TValue> pair in this)
+		{
+			keys.Add(pair.Key);
+			values.Add(pair.Value);
+		}
+	}
+	
+	// load dictionary from lists
+	public void OnAfterDeserialize()
+	{
+		this.Clear();
+
+		if(keys.Count != values.Count)
+			throw new System.Exception(string.Format("there are {0} keys and {1} values after deserialization. Make sure that both key and value types are serializable."));
+
+		for(int i = 0; i < keys.Count; i++)
+			this.Add(keys[i], values[i]);
+    }
+}
+
+[Serializable]
+public class Map<TKey,TValue> : SerializableDictionary<TKey,TValue>
 {
     public TValue this [TKey key]
     {
@@ -72,7 +109,7 @@ public class Map<TKey,TValue> : Dictionary<TKey,TValue>
         set { _DefaultValue = value; isDefaultValueSet = true; }
     }
 }
-
+[Serializable]
 public struct Route
 {
     public NodeEnt startNode;
@@ -129,12 +166,12 @@ public class EntMgr : MonoBehaviour
 {
     public List<NodeEnt> nodeList;
     public List<PathEnt> pathList;
-    public List<Road> roadList;
-    public List<Road> routeList;
     public static EntMgr inst;
     public Transform entContainer;
     public int MAXALGORITM = 40000;
+    [SerializeField]
     public Map<Road,int> roadDict;
+    public LineRenderer pathLineRenderer;
     void Awake()
     {
         inst = this;
@@ -146,6 +183,7 @@ public class EntMgr : MonoBehaviour
         nodeList = new List<NodeEnt>();
         roadDict = new Map<Road, int>(){};
         roadDict.DefaultValue = -1;
+        //Shuddaup
     }
 
     // Update is called once per frame
@@ -166,7 +204,15 @@ public class EntMgr : MonoBehaviour
     {
         roadDict.TryAdd(newRoad,length);
     }
-
+    float curScale = 1f;
+    public void ChangeNodeScale(float newScale)
+    {
+        curScale=newScale;
+        foreach(NodeEnt singleNode in nodeList)
+        {
+            singleNode.transform.localScale=new Vector3(newScale,newScale,1);
+        }
+    }
 
     public void AddNode(NodeEnt newNode)
     {
@@ -183,12 +229,51 @@ public class EntMgr : MonoBehaviour
         }
         pathList.Clear();
     }
+    
+    void OnApplicationPause(bool pauseStatus)
+    {
+        Debug.Log("The current: "+GetRouteListLength(bestRouteList));
+    }
 
+    public void CleanUpAll()
+    {
+        CleanUpPaths();
+        for(int i=0;i<nodeList.Count;i++)
+        {
+            Destroy(nodeList[i].gameObject);
+        }
+        nodeList.Clear();
+        roadDict.Clear();
+        pathLineRenderer.positionCount=0;
+    }
+
+    public void MakeNodeObj(Vector3 newPosition)
+    {
+        NodeEnt newNode = Instantiate(PlacementMgr.inst.node,newPosition,Quaternion.identity,PlacementMgr.inst.entContainer).GetComponent<NodeEnt>();
+        newNode.transform.localScale=new Vector3(curScale,curScale,1);
+        AddNode(newNode);
+    }
     public void DeployPaths()
     {
         foreach(var singleRoad in roadDict)
         {
             InstantiatePath(singleRoad);
+        }
+    }
+    
+    public void UpdateLineSize(float size)
+    {
+        pathLineRenderer.startWidth=.2f*size;
+        pathLineRenderer.endWidth=.2f*size;
+        
+    }
+
+    public void CreatePathLine(List<NodeEnt> nodeList)
+    {
+        pathLineRenderer.positionCount=nodeList.Count;
+        for(int i = 0; i<nodeList.Count;i++)
+        {
+            pathLineRenderer.SetPosition(i,nodeList[i].transform.position + new Vector3(0,0,2));
         }
     }
 
@@ -206,10 +291,11 @@ public class EntMgr : MonoBehaviour
         pathRoute.endNode.AddPath(temp);
         GameObject end = pathRoute.endNode.gameObject;
         Vector2 endPosition = end.transform.position;
-        float dist =(newPath.transform.position-end.transform.position).magnitude;
+        //float dist =(newPath.transform.position-end.transform.position).magnitude;
         float xDist =newPath.transform.position.x-endPosition.x;
         float yDist =newPath.transform.position.y-endPosition.y;
-        newPath.transform.localScale= new Vector3(newPath.transform.localScale.x,dist,newPath.transform.localScale.z);
+        newPath.transform.localScale= new Vector3(newPath.transform.localScale.x,pathRoute.length,newPath.transform.localScale.z);
+        //newPath.transform.localScale= new Vector3(newPath.transform.localScale.x,dist,newPath.transform.localScale.z);
         newPath.transform.eulerAngles= new Vector3(newPath.transform.eulerAngles.x,newPath.transform.eulerAngles.y,(Mathf.Atan2(yDist,xDist)*Mathf.Rad2Deg)-90);
         temp.UpdateColor();
         return newPath;
@@ -262,8 +348,10 @@ public class EntMgr : MonoBehaviour
     }
     public void ToggleHillClimb()
     {
-        if(!algoritmOnline)
-            HillClimbAlgoritm();
+        if(!algoritmOnline && nodeList.Count>2 && SelectionMgr.inst.selectedNodes.Count==0)
+            HillClimbAlgoritm(nodeList);
+        else if(!algoritmOnline && SelectionMgr.inst.selectedNodes.Count>2)
+            HillClimbAlgoritm(SelectionMgr.inst.selectedNodes);
         else
         {
             algoritmOnline=false;
@@ -275,18 +363,18 @@ public class EntMgr : MonoBehaviour
     public bool algoritmOnline = false;
     List<NodeEnt> bestNodeList = new List<NodeEnt>();
     List<Route> bestRouteList = new List<Route>();
-    public void HillClimbAlgoritm()
+    public void HillClimbAlgoritm(List<NodeEnt> listToClimb)
     {
         //SETUP PHASE
         GraphMgr.inst.StartGraph();
         GraphMgr.inst.scores.Clear();
         CleanUpPaths();
         AddAllPaths();
-        List<NodeEnt> templist = new List<NodeEnt>(nodeList);
+        List<NodeEnt> templist = new List<NodeEnt>(listToClimb);
         
-        for(int i=0;i<nodeList.Count;i++)
+        for(int i=0;i<listToClimb.Count;i++)
         {
-            int index1 = Random.Range(0,templist.Count);
+            int index1 = UnityEngine.Random.Range(0,templist.Count);
             bestNodeList.Add(templist[index1]);
             templist.RemoveAt(index1);
         }
@@ -305,8 +393,6 @@ public class EntMgr : MonoBehaviour
 
         Road lastRoad = new Road(bestNodeList[bestNodeList.Count-1],bestNodeList[0]);
         int lastLength = roadDict[lastRoad];
-        if(lastLength==-1)
-            lastLength = roadDict[lastRoad.Swap()];
         if(lastLength==-1)
             Debug.LogError("No Valid Road Found");
         else
@@ -330,28 +416,25 @@ public class EntMgr : MonoBehaviour
         {
             //swap
             List<Route> newRouteList = new List<Route>();
-            int index1 = Random.Range(0,bestNodeList.Count);
-            int index2 = Random.Range(0,bestNodeList.Count);
-            NodeEnt temp = bestNodeList[index1];
-            bestNodeList[index1]=bestNodeList[index2];
-            bestNodeList[index2]=temp;
+            List<NodeEnt> newNodeList = new List<NodeEnt>(bestNodeList);
+            int index1 = UnityEngine.Random.Range(0,newNodeList.Count);
+            int index2 = UnityEngine.Random.Range(0,newNodeList.Count);
+            NodeEnt temp = newNodeList[index1];
+            newNodeList[index1]=newNodeList[index2];
+            newNodeList[index2]=temp;
 
-            for (int o=0;o<bestNodeList.Count-1;o++)
+            for (int o=0;o<newNodeList.Count-1;o++)
             {
-                Road tempRoad = new Road(bestNodeList[o],bestNodeList[o+1]);
+                Road tempRoad = new Road(newNodeList[o],newNodeList[o+1]);
                 int tempLength = roadDict[tempRoad];
-                if(tempLength==-1)
-                    tempLength = roadDict[tempRoad.Swap()];
                 if(tempLength==-1)
                     Debug.LogError("No Valid Road Found");
                 else
                     newRouteList.Add(new Route(tempRoad,tempLength));
             }
 
-            Road lastRoad = new Road(bestNodeList[bestNodeList.Count-1],bestNodeList[0]);
+            Road lastRoad = new Road(newNodeList[newNodeList.Count-1],newNodeList[0]);
             int lastLength = roadDict[lastRoad];
-            if(lastLength==-1)
-                lastLength = roadDict[lastRoad.Swap()];
             if(lastLength==-1)
                 Debug.LogError("No Valid Road Found");
             else
@@ -447,20 +530,21 @@ public class EntMgr : MonoBehaviour
             {
                 newLines=true;
                 bestLength=newLength;
+                bestNodeList=newNodeList;
                 bestRouteList=newRouteList;
-                Debug.Log(bestLength);
+                //Debug.Log(bestLength);
                 if(bestLength!=GraphMgr.inst.scores[GraphMgr.inst.scores.Count-1])
+                {
                     GraphMgr.inst.scores.Add(bestLength);
+                    GraphMgr.inst.UpdateGraph();
+                }
             }
         }
         if(newLines)
         {
             CleanUpPaths();
-            foreach(Route singleRoute in bestRouteList)
-            {
-                InstantiatePath(singleRoute).GetComponent<PathEnt>().SetColor(Color.yellow);
-            }
-            GraphMgr.inst.UpdateGraph();
+            CreatePathLine(bestNodeList);
+            newLines=false;
         }
     }
 

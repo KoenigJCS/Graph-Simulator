@@ -5,8 +5,10 @@ using UnityEngine;
 public class NodeEnt : MonoBehaviour
 {
     public Color myColor = Color.white;
+    public SpriteRenderer innerRing;
     public List<PathEnt> myPaths;
     public List<Road> myRoads;
+    public bool isSelected = false;
     // Start is called before the first frame update
     void Start()
     {
@@ -31,11 +33,26 @@ public class NodeEnt : MonoBehaviour
 
     public void UpdateColor(Color color)
     {
-        this.GetComponent<SpriteRenderer>().color=color;
+        innerRing.color=color;
         myColor=color;
         foreach(PathEnt path in myPaths)
         {
             path.UpdateColor();
         }
+    }
+
+    public void SetColor(Color color)
+    {
+        innerRing.color=color;
+        myColor=color;
+    }   
+    
+    public void SetSelected(bool newState)
+    {
+        isSelected=newState;
+        if(isSelected)
+            this.GetComponent<SpriteRenderer>().color=Color.cyan;
+        else
+            this.GetComponent<SpriteRenderer>().color=Color.white;
     }
 }

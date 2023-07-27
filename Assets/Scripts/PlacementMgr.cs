@@ -56,7 +56,7 @@ public class PlacementMgr : MonoBehaviour
                 RaycastHit2D hit = Physics2D.Raycast(worldPoint, Vector2.zero,Mathf.Infinity,mask);
                 if(summonObjectType==1)
                 {
-                    EntMgr.inst.AddNode(Instantiate(node,worldPoint,Quaternion.identity,entContainer).GetComponent<NodeEnt>());
+                    EntMgr.inst.MakeNodeObj(worldPoint);
                 }
                 else if(summonObjectType==2 && hit.collider != null && pathRender)
                 {
@@ -153,7 +153,9 @@ public class PlacementMgr : MonoBehaviour
                     }
                     Destroy(deletedNode.gameObject);
                 }
+                
             }
+            
             if(targetedPath!=null)
             {
                 Vector2 worldPoint = Camera.main.ScreenToWorldPoint( Input.mousePosition );
@@ -244,7 +246,25 @@ public class PlacementMgr : MonoBehaviour
 
     public void SetMode(int mode)
     {
-        placementMode=mode;
+        if(placementMode==6 && mode==5 && SelectionMgr.inst.selectedNodes.Count>0)
+        {
+            foreach (NodeEnt deletedNode in SelectionMgr.inst.selectedNodes)
+            {
+                EntMgr.inst.nodeList.Remove(deletedNode);
+                foreach (NodeEnt singleNode in EntMgr.inst.nodeList)
+                {
+                    Road tempRoad = new Road(deletedNode,singleNode);
+                    if(EntMgr.inst.roadDict.ContainsKey(tempRoad))
+                        EntMgr.inst.roadDict.Remove(tempRoad);
+                    else if(EntMgr.inst.roadDict.ContainsKey(tempRoad.Swap()))
+                        EntMgr.inst.roadDict.Remove(tempRoad.Swap());
+                }
+                Destroy(deletedNode.gameObject);
+            }
+        }
+        else
+            placementMode=mode;
+        
     }
 
     bool IsMouseOverUI()

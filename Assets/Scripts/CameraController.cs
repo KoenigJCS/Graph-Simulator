@@ -11,10 +11,16 @@ public class CameraController : MonoBehaviour
     public Camera cam;
     public Vector3 position;
     public TMPro.TextMeshProUGUI scaleText;
+    public float startScale;
+    public static CameraController inst;
+    void Awake() {
+        inst=this;
+    }
     // Start is called before the first frame update
     void Start()
     {
         position=gameObj.transform.position;
+        startScale=cam.orthographicSize;
     }
 
     // Update is called once per frame
@@ -39,13 +45,32 @@ public class CameraController : MonoBehaviour
         if(Input.GetKey(KeyCode.UpArrow))
         {
             cam.orthographicSize+=scrollSpeed * Time.deltaTime;
+            EntMgr.inst.ChangeNodeScale(.5f*cam.orthographicSize/startScale);
+            EntMgr.inst.UpdateLineSize(cam.orthographicSize/startScale);
+            scaleText.text=((float)((int)(cam.orthographicSize/1.81f))/4).ToString()+"x";
         }
         if(Input.GetKey(KeyCode.DownArrow))
         {
             cam.orthographicSize-=scrollSpeed * Time.deltaTime;
+            EntMgr.inst.ChangeNodeScale(.5f*cam.orthographicSize/startScale);
+            EntMgr.inst.UpdateLineSize(cam.orthographicSize/startScale);
+            scaleText.text=((float)((int)(cam.orthographicSize/1.81f))/4).ToString()+"x";
         }
-        cam.orthographicSize = Mathf.Clamp(cam.orthographicSize,1,10000);
+        cam.orthographicSize = Mathf.Clamp(cam.orthographicSize,1,100000);
         gameObj.transform.position=position;
-        scaleText.text=((float)((int)(cam.orthographicSize/181f))/4).ToString()+"x";
+        
+    }
+
+    public void ResizeScreen(float newSize)
+    {
+        cam.orthographicSize=(newSize/17.5f)*startScale;
+        EntMgr.inst.ChangeNodeScale(.5f*cam.orthographicSize/startScale);
+        EntMgr.inst.UpdateLineSize(cam.orthographicSize/startScale);
+        scaleText.text=((float)((int)(cam.orthographicSize/1.81f))/4).ToString()+"x";
+    }
+
+    public void SetLocation(Vector3 pos)
+    {
+        position=pos + new Vector3(0,0,-10);
     }
 }
