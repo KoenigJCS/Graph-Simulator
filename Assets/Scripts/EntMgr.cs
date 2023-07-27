@@ -183,7 +183,7 @@ public class EntMgr : MonoBehaviour
         nodeList = new List<NodeEnt>();
         roadDict = new Map<Road, int>(){};
         roadDict.DefaultValue = -1;
-        //Shuddaup
+        GraphMgr.inst.StartGraph();
     }
 
     // Update is called once per frame
@@ -365,7 +365,11 @@ public class EntMgr : MonoBehaviour
     List<Route> bestRouteList = new List<Route>();
     public void HillClimbAlgoritm(List<NodeEnt> listToClimb)
     {
+        roadDict.Clear();
+        pathLineRenderer.positionCount=0;
         //SETUP PHASE
+        if(seed!=0)
+                UnityEngine.Random.InitState(seed);
         GraphMgr.inst.StartGraph();
         GraphMgr.inst.scores.Clear();
         CleanUpPaths();
@@ -383,8 +387,6 @@ public class EntMgr : MonoBehaviour
         {
             Road tempRoad = new Road(bestNodeList[i],bestNodeList[i+1]);
             int newLength = roadDict[tempRoad];
-            if(newLength==-1)
-                newLength = roadDict[tempRoad.Swap()];
             if(newLength==-1)
                 Debug.LogError("No Valid Road Found");
             else
@@ -409,6 +411,7 @@ public class EntMgr : MonoBehaviour
         algoritmOnline=true;
     }
     bool newLines = false;
+    int seed = 0;
     void ProcessHillClimb()
     {
         int bestLength = GetRouteListLength(bestRouteList);
@@ -556,5 +559,13 @@ public class EntMgr : MonoBehaviour
             sum+=singleRoute.length;
         }
         return sum;
+    }
+
+    public void SetSeed(string newSeed)
+    {
+        seed=0;
+        char[] seedAr = newSeed.ToCharArray();
+        for(int i=0;i<seedAr.Length;i++)
+            seed+=(int)seedAr[i];
     }
 }

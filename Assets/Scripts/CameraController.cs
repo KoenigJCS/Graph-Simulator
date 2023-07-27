@@ -5,7 +5,7 @@ using UnityEngine;
 public class CameraController : MonoBehaviour
 {
     public float cameraSpeed = 1f;
-    public float scrollSpeed = 10f;
+    public float scrollSpeed = .1f;
     //public TextMesh scaleText;
     public GameObject gameObj;
     public Camera cam;
@@ -26,6 +26,16 @@ public class CameraController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if(Input.GetKeyDown(KeyCode.LeftShift))
+        {
+            cameraSpeed*=3;
+            scrollSpeed*=3;
+        }
+        if(Input.GetKeyUp(KeyCode.LeftShift))
+        {
+            cameraSpeed/=3;
+            scrollSpeed/=3;
+        }
         if(Input.GetKey(KeyCode.A))
         {
             position.x-=cameraSpeed * Time.deltaTime * cam.orthographicSize;
@@ -44,14 +54,14 @@ public class CameraController : MonoBehaviour
         }
         if(Input.GetKey(KeyCode.UpArrow))
         {
-            cam.orthographicSize+=scrollSpeed * Time.deltaTime;
+            cam.orthographicSize+=scrollSpeed * Time.deltaTime * cam.orthographicSize;
             EntMgr.inst.ChangeNodeScale(.5f*cam.orthographicSize/startScale);
             EntMgr.inst.UpdateLineSize(cam.orthographicSize/startScale);
             scaleText.text=((float)((int)(cam.orthographicSize/1.81f))/4).ToString()+"x";
         }
         if(Input.GetKey(KeyCode.DownArrow))
         {
-            cam.orthographicSize-=scrollSpeed * Time.deltaTime;
+            cam.orthographicSize-=scrollSpeed * Time.deltaTime * cam.orthographicSize;
             EntMgr.inst.ChangeNodeScale(.5f*cam.orthographicSize/startScale);
             EntMgr.inst.UpdateLineSize(cam.orthographicSize/startScale);
             scaleText.text=((float)((int)(cam.orthographicSize/1.81f))/4).ToString()+"x";

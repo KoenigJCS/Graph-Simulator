@@ -58,6 +58,7 @@ public class GraphMgr : MonoBehaviour
         if(graphPanel.activeInHierarchy && scores.Count>0)
         {
             lineGraph.dataPoints.Clear();
+            lineGraph.SetAllDirty();
             //lineRender.positionCount=scores.Count;
             //Note that I'm assuming the first score will always be the highest
             maxScore=scores[0];

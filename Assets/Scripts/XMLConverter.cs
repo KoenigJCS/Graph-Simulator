@@ -85,7 +85,7 @@ namespace Xml2CSharp
         public void LoadXML()
         {
             EntMgr.inst.CleanUpAll();
-            if(EntMgr.inst.algoritmOnline);
+            if(EntMgr.inst.algoritmOnline)
                 EntMgr.inst.ToggleHillClimb();
             if(fileStatus>=0)
             {
