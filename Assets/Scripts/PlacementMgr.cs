@@ -134,7 +134,7 @@ public class PlacementMgr : MonoBehaviour
         }
         if(Input.GetMouseButton(0))
         {
-            if(placementMode==5 && !EntMgr.inst.algoritmOnline)
+            if(placementMode==5 && !EntMgr.inst.t1RunFlag)
             {
                 Vector2 worldPoint = Camera.main.ScreenToWorldPoint( Input.mousePosition );
                 int mask = 1 << 6;
@@ -267,7 +267,7 @@ public class PlacementMgr : MonoBehaviour
         
     }
 
-    bool IsMouseOverUI()
+    public bool IsMouseOverUI()
     {
         return EventSystem.current.IsPointerOverGameObject();
     }

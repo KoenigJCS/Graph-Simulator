@@ -29,14 +29,14 @@ public class SelectionMgr : MonoBehaviour
         if(PlacementMgr.inst.placementMode==6)
         {
         //Selecting
-            if(Input.GetMouseButtonDown(0))
+            if(Input.GetMouseButtonDown(0) && !PlacementMgr.inst.IsMouseOverUI())
             {
                 UnselectAll();
                 isSelecting = true;
                 mousePos1 = Input.mousePosition;
             }
         }
-        if(Input.GetMouseButtonUp(0))
+        if(Input.GetMouseButtonUp(0) && !PlacementMgr.inst.IsMouseOverUI())
         {
             selectedNodes.Clear();
             foreach(NodeEnt ent in EntMgr.inst.nodeList)

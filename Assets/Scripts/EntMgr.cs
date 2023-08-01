@@ -1,9 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using System;
+using System.Threading;
 
-[Serializable]
+[System.Serializable]
 public struct Road
 {
     public NodeEnt startNode;
@@ -48,7 +48,7 @@ public struct Road
         return swappedRoad;
     }
 }
-[Serializable]
+[System.Serializable]
 public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, ISerializationCallbackReceiver
 {
 	[SerializeField]
@@ -75,14 +75,14 @@ public class SerializableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, IS
 		this.Clear();
 
 		if(keys.Count != values.Count)
-			throw new System.Exception(string.Format("there are {0} keys and {1} values after deserialization. Make sure that both key and value types are serializable."));
+			throw new System.Exception(string.Format("there are {0} keys and {1} values after deserialization. Make sure that both key and value types are System.Serializable."));
 
 		for(int i = 0; i < keys.Count; i++)
 			this.Add(keys[i], values[i]);
     }
 }
 
-[Serializable]
+[System.Serializable]
 public class Map<TKey,TValue> : SerializableDictionary<TKey,TValue>
 {
     public TValue this [TKey key]
@@ -109,7 +109,7 @@ public class Map<TKey,TValue> : SerializableDictionary<TKey,TValue>
         set { _DefaultValue = value; isDefaultValueSet = true; }
     }
 }
-[Serializable]
+[System.Serializable]
 public struct Route
 {
     public NodeEnt startNode;
@@ -162,6 +162,35 @@ public struct Route
     }
 }
 
+public struct AlgorithmInfo
+{
+    public int index;
+    public List<NodeEnt> bestNodeList;
+    public List<Route> bestRouteList;
+    public void Clear()
+    {
+        bestNodeList.Clear();
+        bestRouteList .Clear();
+    }
+    public void Start()
+    {
+        bestNodeList = new List<NodeEnt>();
+        bestRouteList  = new List<Route>();
+    }
+
+    public AlgorithmInfo(int newIndex)
+    {
+        this.index=newIndex;
+        this.bestNodeList = new List<NodeEnt>();
+        this.bestRouteList  = new List<Route>();
+    }
+    public AlgorithmInfo(int newIndex, List<NodeEnt> newNodeList, List<Route> newRouteList)
+    {
+        this.index=newIndex;
+        this.bestNodeList=newNodeList;
+        this.bestRouteList=newRouteList;
+    }
+}
 public class EntMgr : MonoBehaviour
 {
     public List<NodeEnt> nodeList;
@@ -171,7 +200,12 @@ public class EntMgr : MonoBehaviour
     public int MAXALGORITM = 40000;
     [SerializeField]
     public Map<Road,int> roadDict;
-    public LineRenderer pathLineRenderer;
+    public Transform lineRendContainer;
+    public GameObject lineRendPrefab;
+    public List<LineRenderer> multiLineRendererList;
+    public List<AlgorithmInfo> algInfoList;
+    //public LineRenderer multiLineRendererList[0];
+    int algSeed = 0;
     void Awake()
     {
         inst = this;
@@ -179,20 +213,32 @@ public class EntMgr : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        multiLineRendererList.Clear();
+        multiLineRendererList.Add(Instantiate(lineRendPrefab,Vector3.zero,Quaternion.identity,lineRendContainer).GetComponent<LineRenderer>());
         pathList = new List<PathEnt>();
         nodeList = new List<NodeEnt>();
+        algInfoList = new List<AlgorithmInfo>();
+        algInfoList.Add(new AlgorithmInfo(0));
+        algInfoList[0].Start();
         roadDict = new Map<Road, int>(){};
         roadDict.DefaultValue = -1;
         GraphMgr.inst.StartGraph();
+        listOFunctionsToRunInMain = new Queue<System.Action>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(algoritmOnline)
+        while(listOFunctionsToRunInMain.Count>0)
         {
-            ProcessHillClimb();
+            System.Action functionToRun =  listOFunctionsToRunInMain.Dequeue();
+            functionToRun();
         }
+    }
+    Queue<System.Action> listOFunctionsToRunInMain;
+    public void QueueMainThreadFunction(System.Action someFunction)
+    {
+        listOFunctionsToRunInMain.Enqueue(someFunction);
     }
 
     public void AddPath(PathEnt newPath)
@@ -229,11 +275,6 @@ public class EntMgr : MonoBehaviour
         }
         pathList.Clear();
     }
-    
-    void OnApplicationPause(bool pauseStatus)
-    {
-        Debug.Log("The current: "+GetRouteListLength(bestRouteList));
-    }
 
     public void CleanUpAll()
     {
@@ -244,7 +285,10 @@ public class EntMgr : MonoBehaviour
         }
         nodeList.Clear();
         roadDict.Clear();
-        pathLineRenderer.positionCount=0;
+        foreach (var singleLineRend in multiLineRendererList)
+        {
+            singleLineRend.positionCount=0;
+        }
     }
 
     public void MakeNodeObj(Vector3 newPosition)
@@ -263,17 +307,17 @@ public class EntMgr : MonoBehaviour
     
     public void UpdateLineSize(float size)
     {
-        pathLineRenderer.startWidth=.2f*size;
-        pathLineRenderer.endWidth=.2f*size;
+        multiLineRendererList[0].startWidth=.02f*size;
+        multiLineRendererList[0].endWidth=.02f*size;
         
     }
 
-    public void CreatePathLine(List<NodeEnt> nodeList)
+    public void CreatePathLine()
     {
-        pathLineRenderer.positionCount=nodeList.Count;
-        for(int i = 0; i<nodeList.Count;i++)
+        multiLineRendererList[0].positionCount=algInfoList[0].bestNodeList.Count;
+        for(int i = 0; i<algInfoList[0].bestNodeList.Count;i++)
         {
-            pathLineRenderer.SetPosition(i,nodeList[i].transform.position + new Vector3(0,0,2));
+            multiLineRendererList[0].SetPosition(i,algInfoList[0].bestNodeList[i].transform.position + new Vector3(0,0,2));
         }
     }
 
@@ -324,7 +368,18 @@ public class EntMgr : MonoBehaviour
         return newPath;
     }
 
-    
+    private volatile bool workInProgress = false;
+    private Thread t1;
+    private Thread t2;
+ 
+    public volatile bool t1RunFlag = false;
+    private volatile bool cancelFlag = false;
+    private static int _tracker = 0;
+    private static ThreadLocal<System.Random> _random = new ThreadLocal<System.Random>(() => {
+        var seed = (int)(System.Environment.TickCount & 0xFFFFFF00 | (byte)(Interlocked.Increment(ref _tracker) % 255));
+        var random = new System.Random(seed);
+        return random;
+    });
 
     public void AddAllPaths()
     {
@@ -348,28 +403,37 @@ public class EntMgr : MonoBehaviour
     }
     public void ToggleHillClimb()
     {
-        if(!algoritmOnline && nodeList.Count>2 && SelectionMgr.inst.selectedNodes.Count==0)
+        if(!t1RunFlag && nodeList.Count>2 && SelectionMgr.inst.selectedNodes.Count==0)
+        {
             HillClimbAlgoritm(nodeList);
-        else if(!algoritmOnline && SelectionMgr.inst.selectedNodes.Count>2)
+            t1 = new Thread(ProcessHillClimb) {Name = "Thread 1"};
+            t1.Start();
+            t1RunFlag=true;
+        }
+        else if(!t1RunFlag && SelectionMgr.inst.selectedNodes.Count>2)
+        {
             HillClimbAlgoritm(SelectionMgr.inst.selectedNodes);
+            t1 = new Thread(ProcessHillClimb) {Name = "Thread 1"};
+            t1.Start();
+            t1RunFlag=true;
+        }
         else
         {
-            algoritmOnline=false;
-            bestNodeList = new List<NodeEnt>();
-            bestRouteList = new List<Route>();
+            t1RunFlag=false;
+            t1.Abort();
+            foreach (var singleAlgInfo in algInfoList)
+            {
+                singleAlgInfo.Clear();
+            }
         }
     }
-
-    public bool algoritmOnline = false;
-    List<NodeEnt> bestNodeList = new List<NodeEnt>();
-    List<Route> bestRouteList = new List<Route>();
     public void HillClimbAlgoritm(List<NodeEnt> listToClimb)
     {
         roadDict.Clear();
-        pathLineRenderer.positionCount=0;
+        multiLineRendererList[0].positionCount=0;
         //SETUP PHASE
-        if(seed!=0)
-                UnityEngine.Random.InitState(seed);
+        if(algSeed!=0)
+                UnityEngine.Random.InitState(algSeed);
         GraphMgr.inst.StartGraph();
         GraphMgr.inst.scores.Clear();
         CleanUpPaths();
@@ -379,50 +443,51 @@ public class EntMgr : MonoBehaviour
         for(int i=0;i<listToClimb.Count;i++)
         {
             int index1 = UnityEngine.Random.Range(0,templist.Count);
-            bestNodeList.Add(templist[index1]);
+            algInfoList[0].bestNodeList.Add(templist[index1]);
             templist.RemoveAt(index1);
         }
         
-        for (int i=0;i<bestNodeList.Count-1;i++)
+        for (int i=0;i<algInfoList[0].bestNodeList.Count-1;i++)
         {
-            Road tempRoad = new Road(bestNodeList[i],bestNodeList[i+1]);
+            Road tempRoad = new Road(algInfoList[0].bestNodeList[i],algInfoList[0].bestNodeList[i+1]);
             int newLength = roadDict[tempRoad];
             if(newLength==-1)
                 Debug.LogError("No Valid Road Found");
             else
-                bestRouteList.Add(new Route(tempRoad,newLength));
+                algInfoList[0].bestRouteList.Add(new Route(tempRoad,newLength));
         }
 
-        Road lastRoad = new Road(bestNodeList[bestNodeList.Count-1],bestNodeList[0]);
+        Road lastRoad = new Road(algInfoList[0].bestNodeList[algInfoList[0].bestNodeList.Count-1],algInfoList[0].bestNodeList[0]);
         int lastLength = roadDict[lastRoad];
         if(lastLength==-1)
             Debug.LogError("No Valid Road Found");
         else
-            bestRouteList.Add(new Route(lastRoad,lastLength));
+            algInfoList[0].bestRouteList.Add(new Route(lastRoad,lastLength));
    
-        // foreach(Route singleRoute in bestRouteList)
+        // foreach(Route singleRoute in algInfoList[0].bestRouteList)
         // {
         //     InstantiatePath(singleRoute).GetComponent<PathEnt>().SetColor(Color.yellow);
         // }
-        int bestLength = GetRouteListLength(bestRouteList);
+        int bestLength = GetRouteListLength(algInfoList[0].bestRouteList);
         GraphMgr.inst.scores.Add(bestLength);
         Debug.Log("Started With: "+bestLength);
         //Begin Improvement
-        algoritmOnline=true;
+        t1RunFlag=true;
     }
     bool newLines = false;
-    int seed = 0;
+    
+    
     void ProcessHillClimb()
     {
-        int bestLength = GetRouteListLength(bestRouteList);
-        int calculatedMAX = (MAXALGORITM/bestRouteList.Count)+1;
-        for(int i = 0; i<calculatedMAX;i++)
+        int bestLength = GetRouteListLength(algInfoList[0].bestRouteList);
+        //int calculatedMAX = (MAXALGORITM/algInfoList[0].bestRouteList.Count)+1;
+        while(t1RunFlag)
         {
             //swap
             List<Route> newRouteList = new List<Route>();
-            List<NodeEnt> newNodeList = new List<NodeEnt>(bestNodeList);
-            int index1 = UnityEngine.Random.Range(0,newNodeList.Count);
-            int index2 = UnityEngine.Random.Range(0,newNodeList.Count);
+            List<NodeEnt> newNodeList = new List<NodeEnt>(algInfoList[0].bestNodeList);
+            int index1 = _random.Value.Next() % newNodeList.Count;
+            int index2 = _random.Value.Next() % newNodeList.Count;
             NodeEnt temp = newNodeList[index1];
             newNodeList[index1]=newNodeList[index2];
             newNodeList[index2]=temp;
@@ -431,6 +496,8 @@ public class EntMgr : MonoBehaviour
             {
                 Road tempRoad = new Road(newNodeList[o],newNodeList[o+1]);
                 int tempLength = roadDict[tempRoad];
+                if(tempLength==-1)
+                    tempLength = roadDict[tempRoad.Swap()];
                 if(tempLength==-1)
                     Debug.LogError("No Valid Road Found");
                 else
@@ -443,113 +510,30 @@ public class EntMgr : MonoBehaviour
                 Debug.LogError("No Valid Road Found");
             else
                 newRouteList.Add(new Route(lastRoad,lastLength));
-
-            /*
-
-            This is a optimization but it needs more work :(
-
-            
-            // Road tempRoad1,tempRoad2;
-            // int newLength1,newLength2;
-            // if(index1==bestNodeList.Count-1)
-            // {
-            //     tempRoad1 = new Road(bestNodeList[index1],bestNodeList[0]);
-            //     tempRoad2 = new Road(bestNodeList[index1-1],bestNodeList[index1]);
-            // }
-            // else if(index1==0)
-            // {
-            //     tempRoad1 = new Road(bestNodeList[0],bestNodeList[1]);
-            //     tempRoad2 = new Road(bestNodeList[bestNodeList.Count-1],bestNodeList[0]);
-            // }
-            // else
-            // {
-            //     tempRoad1 = new Road(bestNodeList[index1],bestNodeList[index1+1]);
-            //     tempRoad2 = new Road(bestNodeList[index1-1],bestNodeList[index1]);
-            // }
-
-            // newLength1 = roadDict[tempRoad1];
-            // if(newLength1==-1)
-            //     newLength1 = roadDict[tempRoad1.Swap()];
-            // newLength2 = roadDict[tempRoad2];
-            // if(newLength2==-1)
-            //     newLength2 = roadDict[tempRoad1.Swap()];
-            // if(newLength1==-1 || newLength2==-1)
-            //     Debug.LogError("No Valid Road Found");
-            // else
-            // {
-            //     if(index1==0)
-            //     {
-            //         newRouteList[0] = new Route(tempRoad1,newLength1);
-            //         newRouteList[newRouteList.Count-1] = new Route(tempRoad2,newLength2);
-            //     }
-            //     else
-            //     {
-            //         newRouteList[index1] = new Route(tempRoad1,newLength1);
-            //         newRouteList[index1-1] = new Route(tempRoad2,newLength2);
-            //     }
-            // }
-
-            // if(index2==bestNodeList.Count-1)
-            // {
-            //     tempRoad1 = new Road(bestNodeList[index2],bestNodeList[0]);
-            //     tempRoad2 = new Road(bestNodeList[index2-1],bestNodeList[index2]);
-            // }
-            // else if(index2==0)
-            // {
-            //     tempRoad1 = new Road(bestNodeList[0],bestNodeList[1]);
-            //     tempRoad2 = new Road(bestNodeList[bestNodeList.Count-1],bestNodeList[0]);
-            // }
-            // else
-            // {
-            //     tempRoad1 = new Road(bestNodeList[index2],bestNodeList[index2+1]);
-            //     tempRoad2 = new Road(bestNodeList[index2-1],bestNodeList[index2]);
-            // }
-
-            // newLength1 = roadDict[tempRoad1];
-            // if(newLength1==-1)
-            //     newLength1 = roadDict[tempRoad1.Swap()];
-            // newLength2 = roadDict[tempRoad2];
-            // if(newLength2==-1)
-            //     newLength2 = roadDict[tempRoad1.Swap()];
-            // if(newLength1==-1 || newLength2==-1)
-            //     Debug.LogError("No Valid Road Found");
-            // else
-            // {
-            //     if(index2==0)
-            //     {
-            //         newRouteList[0] = new Route(tempRoad1,newLength1);
-            //         newRouteList[newRouteList.Count-1] = new Route(tempRoad2,newLength2);
-            //     }
-            //     else
-            //     {
-            //         newRouteList[index2] = new Route(tempRoad1,newLength1);
-            //         newRouteList[index2-1] = new Route(tempRoad2,newLength2);
-            //     }
-            // }
-
-            */
             
             int newLength = GetRouteListLength(newRouteList);
             if(newLength<=bestLength)
             {
                 newLines=true;
                 bestLength=newLength;
-                bestNodeList=newNodeList;
-                bestRouteList=newRouteList;
+                algInfoList[0] = new AlgorithmInfo(0,newNodeList,newRouteList);
                 //Debug.Log(bestLength);
                 if(bestLength!=GraphMgr.inst.scores[GraphMgr.inst.scores.Count-1])
                 {
                     GraphMgr.inst.scores.Add(bestLength);
-                    GraphMgr.inst.UpdateGraph();
+                    QueueMainThreadFunction(UpdateGraphWrapper);
+                    CleanUpPaths();
+                    QueueMainThreadFunction(CreatePathLine);
+                    newLines=false;
                 }
             }
         }
-        if(newLines)
-        {
-            CleanUpPaths();
-            CreatePathLine(bestNodeList);
-            newLines=false;
-        }
+        
+    }
+
+    private void UpdateGraphWrapper()
+    {
+        GraphMgr.inst.UpdateGraph();
     }
 
     public int GetRouteListLength(List<Route> routeList)
@@ -564,9 +548,9 @@ public class EntMgr : MonoBehaviour
 
     public void SetSeed(string newSeed)
     {
-        seed=0;
+        algSeed=0;
         char[] seedAr = newSeed.ToCharArray();
         for(int i=0;i<seedAr.Length;i++)
-            seed+=(int)seedAr[i];
+            algSeed+=(int)seedAr[i];
     }
 }

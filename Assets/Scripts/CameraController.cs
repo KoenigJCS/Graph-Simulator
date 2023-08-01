@@ -55,14 +55,14 @@ public class CameraController : MonoBehaviour
         if(Input.GetKey(KeyCode.UpArrow))
         {
             cam.orthographicSize+=scrollSpeed * Time.deltaTime * cam.orthographicSize;
-            EntMgr.inst.ChangeNodeScale(.5f*cam.orthographicSize/startScale);
+            EntMgr.inst.ChangeNodeScale(.25f*cam.orthographicSize/startScale);
             EntMgr.inst.UpdateLineSize(cam.orthographicSize/startScale);
             scaleText.text=((float)((int)(cam.orthographicSize/1.81f))/4).ToString()+"x";
         }
         if(Input.GetKey(KeyCode.DownArrow))
         {
             cam.orthographicSize-=scrollSpeed * Time.deltaTime * cam.orthographicSize;
-            EntMgr.inst.ChangeNodeScale(.5f*cam.orthographicSize/startScale);
+            EntMgr.inst.ChangeNodeScale(.25f*cam.orthographicSize/startScale);
             EntMgr.inst.UpdateLineSize(cam.orthographicSize/startScale);
             scaleText.text=((float)((int)(cam.orthographicSize/1.81f))/4).ToString()+"x";
         }
@@ -74,7 +74,7 @@ public class CameraController : MonoBehaviour
     public void ResizeScreen(float newSize)
     {
         cam.orthographicSize=(newSize/17.5f)*startScale;
-        EntMgr.inst.ChangeNodeScale(.5f*cam.orthographicSize/startScale);
+        EntMgr.inst.ChangeNodeScale(.25f*cam.orthographicSize/startScale);
         EntMgr.inst.UpdateLineSize(cam.orthographicSize/startScale);
         scaleText.text=((float)((int)(cam.orthographicSize/1.81f))/4).ToString()+"x";
     }
