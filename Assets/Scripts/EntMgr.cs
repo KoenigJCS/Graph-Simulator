@@ -415,7 +415,8 @@ public class EntMgr : MonoBehaviour
     void ProcessHillClimb()
     {
         int bestLength = GetRouteListLength(bestRouteList);
-        for(int i = 0; i<MAXALGORITM;i++)
+        int calculatedMAX = (MAXALGORITM/bestRouteList.Count)+1;
+        for(int i = 0; i<calculatedMAX;i++)
         {
             //swap
             List<Route> newRouteList = new List<Route>();
