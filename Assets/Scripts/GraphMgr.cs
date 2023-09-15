@@ -62,10 +62,10 @@ public class GraphMgr : MonoBehaviour
             //lineRender.positionCount=scores.Count;
             //Note that I'm assuming the first score will always be the highest
             maxScore=scores[0];
-            minScore=scores[scores.Count-1];
+            minScore=scores[^1];
             for(int i = 0; i<scores.Count;i++)
             {
-                lineGraph.dataPoints.Add(new Vector2(((float)i/(float)(scores.Count-1))*MAX_X,((float)(scores[i]-minScore)/(maxScore-minScore))*MAX_Y));
+                lineGraph.dataPoints.Add(new Vector2(i / (float)(scores.Count-1)*MAX_X,(float)(scores[i]-minScore)/(maxScore-minScore)*MAX_Y));
                 //lineRender.SetPosition(i,new Vector3(((float)i/(float)(scores.Count-1))*MAX_X,((float)(scores[i]-minScore)/(maxScore-minScore))*MAX_Y,5));
             }
             string yValues = "";
