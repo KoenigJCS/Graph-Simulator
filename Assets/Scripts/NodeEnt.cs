@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking.Types;
 
 public class NodeEnt : MonoBehaviour
 {
@@ -9,6 +10,7 @@ public class NodeEnt : MonoBehaviour
     public List<PathEnt> myPaths;
     public List<Road> myRoads;
     public bool isSelected = false;
+    public int nodeID;
     // Start is called before the first frame update
     void Start()
     {

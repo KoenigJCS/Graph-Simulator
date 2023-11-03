@@ -1988,6 +1988,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb4548b946e12bf45b050d68a817f891, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  computeShader: {fileID: 7200000, guid: 19e15c09042fa544da79bea200c4160d, type: 3}
   initalNodeList: []
   t1RunFlag: 0
 --- !u!1 &397316231

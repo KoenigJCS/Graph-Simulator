@@ -267,9 +267,10 @@ public class EntMgr : MonoBehaviour
         }
     }
 
-    public void AddNode(NodeEnt newNode)
+    public int AddNode(NodeEnt newNode)
     {
         nodeList.Add(newNode);
+        return nodeList.Count;
     }
 
     public void CleanUpPaths()
@@ -302,7 +303,8 @@ public class EntMgr : MonoBehaviour
     {
         NodeEnt newNode = Instantiate(PlacementMgr.inst.node,newPosition,Quaternion.identity,PlacementMgr.inst.entContainer).GetComponent<NodeEnt>();
         newNode.transform.localScale=new Vector3(curScale,curScale,1);
-        AddNode(newNode);
+        newNode.nodeID= AddNode(newNode);
+        
     }
     public void DeployPaths()
     {
@@ -326,6 +328,16 @@ public class EntMgr : MonoBehaviour
         {
             multiLineRendererList[0].SetPosition(i,algInfoList[0].bestNodeList[i].transform.position + new Vector3(0,0,2));
         }
+    }
+
+    public void SetBestNodes(int[] newNodeIDList)
+    {
+        List<NodeEnt> tempNodeList = new();
+        for(int i =0;i<newNodeIDList.Length;i++)
+        {
+            tempNodeList.Add(nodeList[newNodeIDList[i]]);
+        }
+        algInfoList[0] = new(algInfoList[0].index,tempNodeList,algInfoList[0].bestRouteList);
     }
 
     public void SetBestNodes(List<NodeEnt> newNodeList)
