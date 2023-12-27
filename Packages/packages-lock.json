@@ -1,12 +1,5 @@
 {
   "dependencies": {
-    "com.hecomi.unvpipe": {
-      "version": "https://github.com/hecomi/uNvPipe.git#upm",
-      "depth": 0,
-      "source": "git",
-      "dependencies": {},
-      "hash": "106bcc1a49d8ed573021e63bb07d1969b09880f3"
-    },
     "com.unity.2d.animation": {
       "version": "7.0.10",
       "depth": 1,
