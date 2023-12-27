@@ -186,10 +186,10 @@ public struct AlgorithmInfo
         bestRouteList  = new List<Route>();
     }
 
-    public void SetBestNodes(List<NodeEnt> newNodeList)
-    {
-        bestNodeList = newNodeList;
-    }
+    // public void SetBestNodes(List<NodeEnt> newNodeList)
+    // {
+    //     bestNodeList = newNodeList;
+    // }
 
     public AlgorithmInfo(int newIndex, List<NodeEnt> newNodeList, List<Route> newRouteList)
     {
