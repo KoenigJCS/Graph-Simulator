@@ -1,6 +1,6 @@
 # This is Graph Simulator
 ## The Basics
-This software serves as a visual display of two types of machine learning applied to the traveling salemsen problem
+This software serves as a visual display of two types of machine learning applied to the traveling salesmen problem
 1. Hill Climbing Algorithm
 2. Crossover PMX Genetic Algorithm
 ## How it works
