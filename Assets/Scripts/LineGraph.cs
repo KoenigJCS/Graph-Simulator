@@ -29,7 +29,7 @@ public class LineGraph : Graphic
             Vector2 dataPoint = dataPoints[i];
 
             float xPos = graphRect.x + i * xStep;
-            float yPos = graphRect.y + (dataPoint.y / 100f) * graphHeight;
+            float yPos = graphRect.y + dataPoint.y / 100f * graphHeight;
 
             DrawPoint(vh, new Vector2(xPos, yPos));
 
@@ -37,7 +37,7 @@ public class LineGraph : Graphic
             {
                 Vector2 prevDataPoint = dataPoints[i - 1];
                 float prevXPos = graphRect.x + (i - 1) * xStep;
-                float prevYPos = graphRect.y + (prevDataPoint.y / 100f) * graphHeight;
+                float prevYPos = graphRect.y + prevDataPoint.y / 100f * graphHeight;
 
                 DrawLine(vh, new Vector2(prevXPos, prevYPos), new Vector2(xPos, yPos));
             }
@@ -74,7 +74,6 @@ public class LineGraph : Graphic
 
         // Calculate the direction and length of the line
         Vector2 direction = (endPos - startPos).normalized;
-        float length = (endPos - startPos).magnitude;
 
         // Calculate the perpendicular direction for line width
         Vector2 perpendicular = new Vector2(-direction.y, direction.x);

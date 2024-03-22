@@ -13,7 +13,6 @@ public struct Options
     public float px;
     public float pm;
 }
-
 public class GeneticAlgorithm : MonoBehaviour
 {
     public List<NodeEnt> initalNodeList;
@@ -149,7 +148,8 @@ public class GeneticAlgorithm : MonoBehaviour
 
     public void QueueMainThreadFunction(System.Action someFunction)
     {
-        listOFunctionsToRunInMain.Enqueue(someFunction);
+        if(listOFunctionsToRunInMain.Count < 10000)
+            listOFunctionsToRunInMain.Enqueue(someFunction);
     }
 }
 

@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>MPI.NET</id>
+    <version>1.4.0</version>
+    <authors>Douglas Gregor, Andrew Lumsdaine, Ben Martin,contrib. Jean-Michel Perraud, Vijay Sharma, Daniel Collins, Olion17, and others TBC</authors>
+    <owners>Douglas Gregor, Andrew Lumsdaine, Ben Martin,contrib. Jean-Michel Perraud, Vijay Sharma, Daniel Collins, Olion17, and others TBC</owners>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/jmp75/MPI.NET/blob/master/LICENSE_1_0.txt</licenseUrl>
+    <projectUrl>https://github.com/jmp75/MPI.NET</projectUrl>
+    <iconUrl>http://www.osl.iu.edu/research/mpi.net/images/PTL-logo.jpg</iconUrl>
+    <description>MPI.NET, updated for .NET standard</description>
+    <releaseNotes>This NuGet package is for Windows only. The MPI.NET code works on Linux, but needs to be compiled on the target platform. This package is compiled for use with Microsoft's msmpi.dll (Windows HPC). Migration to .NET Standard 2.0.</releaseNotes>
+    <copyright>Copyright © 2007, 2008 The Trustees of Indiana University; Contributions Copyright © 2013-2017 CSIRO, and https://github.com/Olion17</copyright>
+    <tags>MPI HPC</tags>
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="System.Reflection.Emit.Lightweight" version="4.3.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
