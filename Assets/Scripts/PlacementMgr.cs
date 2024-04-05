@@ -62,8 +62,7 @@ public class PlacementMgr : MonoBehaviour
                 {
                     targetedPath = Instantiate(path,hit.collider.transform.position,Quaternion.identity,entContainer);
                     targetedPath.GetComponent<PathEnt>().aNode=hit.transform.GetComponent<NodeEnt>();
-                    EntMgr.inst.AddPath(targetedPath.GetComponent<PathEnt>());
-                    hit.transform.GetComponent<NodeEnt>().AddPath(targetedPath.GetComponent<PathEnt>());
+                    //EntMgr.inst.AddPath(targetedPath.GetComponent<PathEnt>());
                 }
             }
             else if (placementMode==2)
@@ -72,7 +71,7 @@ public class PlacementMgr : MonoBehaviour
                 RaycastHit2D hit = Physics2D.Raycast(worldPoint, Vector2.zero,Mathf.Infinity,mask);
                 if(hit.collider != null)
                 {
-                    hit.transform.GetComponent<NodeEnt>().UpdateColor(placeColor);
+                    hit.transform.GetComponent<NodeEnt>().SetColor(placeColor);
                     // SpriteRenderer sp = hit.transform.GetComponent<SpriteRenderer>();
                     // sp.color=placeColor;
                 }
@@ -189,8 +188,7 @@ public class PlacementMgr : MonoBehaviour
             {
                 if(targetedPath!=null)
                 {
-                    targetedPath.GetComponent<PathEnt>().aNode.myPaths.Remove(targetedPath.GetComponent<PathEnt>());
-                    EntMgr.inst.pathList.Remove(targetedPath.GetComponent<PathEnt>());
+                    //EntMgr.inst.pathList.Remove(targetedPath.GetComponent<PathEnt>());
                     Destroy(targetedPath);
                 }
             }
@@ -203,15 +201,13 @@ public class PlacementMgr : MonoBehaviour
                 //Route tempRoute = new Route(tempPath.aNode,tempPath.bNode,tempPath.length);
                 if(EntMgr.inst.roadDict.ContainsKey(tempRoad) || EntMgr.inst.roadDict.ContainsKey(tempRoad.Swap()))
                 {
-                    targetedPath.GetComponent<PathEnt>().aNode.myPaths.Remove(targetedPath.GetComponent<PathEnt>());
-                    EntMgr.inst.pathList.Remove(targetedPath.GetComponent<PathEnt>());
+                    //EntMgr.inst.pathList.Remove(targetedPath.GetComponent<PathEnt>());
                     Destroy(targetedPath);
                 }
                 else
                 {
                     EntMgr.inst.AddRoadToDict(tempRoad,tempPath.length);
                     tempPath.UpdateLength(Mathf.RoundToInt((tempPath.aNode.transform.position-bNode.transform.position).magnitude));
-                    bNode.AddPath(tempPath);
                     tempPath.UpdateColor();
                 }
             }
@@ -285,10 +281,7 @@ public class PlacementMgr : MonoBehaviour
     public void SetPathRender( bool state)
     {
         pathRender=state;
-        if(!pathRender)
-            EntMgr.inst.CleanUpPaths();
-        else
-            EntMgr.inst.DeployPaths();
+        EntMgr.inst.DeployPaths();
         
     }
 }

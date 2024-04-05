@@ -56,8 +56,6 @@ public class TSPConverter : MonoBehaviour
     public void LoadTSP()
     {
         EntMgr.inst.CleanUpAll();
-        if(EntMgr.inst.t1RunFlag)
-            EntMgr.inst.ToggleHillClimb();
         if(fileStatus>=0)
         {
             using (StringReader reader = new StringReader(tspRawFiles[fileStatus].text))

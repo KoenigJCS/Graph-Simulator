@@ -85,8 +85,6 @@ namespace Xml2CSharp
         public void LoadXML()
         {
             EntMgr.inst.CleanUpAll();
-            if(EntMgr.inst.t1RunFlag)
-                EntMgr.inst.ToggleHillClimb();
             if(fileStatus>=0)
             {
                 serializer = new XmlSerializer(typeof(TravellingSalesmanProblemInstance));
