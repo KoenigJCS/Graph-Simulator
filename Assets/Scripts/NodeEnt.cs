@@ -15,6 +15,7 @@ public class NodeEnt : MonoBehaviour
     public SpriteRenderer innerRing;
     public bool isSelected = false;
     public int myID = -1;
+    public int demand = -1;
     public NodeType nodeType = NodeType.Standard;
     // Start is called before the first frame update
     void Start()

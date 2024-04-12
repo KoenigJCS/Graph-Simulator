@@ -162,6 +162,8 @@ public class EVRPConverter : MonoBehaviour
                     lineSection = LineSection.StationCoordSection;
                     break;
                 }
+                string[] demandChunks = line.Split(' ');
+                EntMgr.inst.nodeList[int.Parse(demandChunks[0])-1].demand = int.Parse(demandChunks[1]);
                 break;
             case LineSection.StationCoordSection:
                 if (line.Contains("DEPOT_SECTION"))

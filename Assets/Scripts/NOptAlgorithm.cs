@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -76,7 +77,7 @@ public class NOptAlgorithm : MonoBehaviour
         while(isImproved)
         {
             isImproved=false;
-            for(int i = 1;i<curRoute.Count-2;i++)
+            for(int i = 1;i<curRoute.Count-1;i++)
             {
                 for(int j = i+1;j<curRoute.Count;j++)
                 {
@@ -107,22 +108,58 @@ public class NOptAlgorithm : MonoBehaviour
 
     int EvalRoute(List<NodeEnt> nodes)
     {
-        int sum = 0;
+        List<int> vehicleSums = new();
+        List<int> vehicleCapacities = new();
+        int vehicles = EVRPConverter.inst.evrpData.vehicles;
+        for(int i =0;i<vehicles;i++)
+        {
+            vehicleSums.Add(0);
+            vehicleCapacities.Add(EVRPConverter.inst.evrpData.capacity);
+        }
+        int curVehicle = 0;
         for(int i = 0; i<nodes.Count-1;i++)
         {
+            if(nodes[i].nodeType==NodeType.Depot && i!=0)
+            {
+                curVehicle++;
+                vehicleSums.Add(0);
+                vehicleCapacities.Add(EVRPConverter.inst.evrpData.capacity);
+            }
             Road tempRoad = new Road(nodes[i],nodes[i+1]);
             int newLength = EntMgr.inst.roadDict[tempRoad];
-            if(newLength==-1)
+            if(nodes[i]==nodes[i+1])
+            {
+                newLength=0;
+            }
+            else if(newLength==-1)
+            {
                 Debug.LogError("Invalid Path!");
-            sum+=newLength;
+                newLength=99999;
+            }
+            vehicleCapacities[curVehicle]-=nodes[i+1].demand;
+            vehicleSums[curVehicle]+=newLength;
         }
 
         Road wrapTempRoad = new Road(nodes[^1],nodes[0]);
         int wrapNewLength = EntMgr.inst.roadDict[wrapTempRoad];
-        if(wrapNewLength==-1)
+        if(nodes[^1]==nodes[0])
+        {
+            wrapNewLength=0;
+        }
+        else if(wrapNewLength==-1)
+        {
             Debug.LogError("Invalid Path!");
-        sum+=wrapNewLength;
-        return sum;
+            wrapNewLength=99999;
+        }
+        vehicleCapacities[vehicles-1]-=nodes[0].demand;
+        vehicleSums[vehicles-1]+=wrapNewLength;
+        bool isOverCapacity = false;
+        for(int i = 0; i<vehicles;i++)
+        {
+            if(vehicleCapacities[i]<0)
+                isOverCapacity=true;
+        }     
+        return isOverCapacity?vehicleSums.Max()*10:vehicleSums.Max();
     }
 
     public void DisplayUpdate()
@@ -170,11 +207,19 @@ public class NOptAlgorithm : MonoBehaviour
             temp = new(EntMgr.inst.nodeList);
         }
         int nodeLenght=temp.Count;
+        
         fillRoute.Add(temp[0]);
+        int nextWarehouse = EVRPConverter.inst.evrpData.vehicles;
+        int warehouseCount = 1;
         temp.Remove(temp[0]);
         for(int i = 1; i<nodeLenght;i++)
         {
             int index = _random.Value.Next() % temp.Count;
+            if(i==warehouseCount*nodeLenght/nextWarehouse)
+            {
+                fillRoute.Add(fillRoute[0]);
+                warehouseCount++;
+            }
             fillRoute.Add(temp[index]);
             temp.Remove(temp[index]);
         }
