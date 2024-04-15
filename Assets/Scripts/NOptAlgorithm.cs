@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security;
 using System.Threading;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -63,17 +64,20 @@ public class NOptAlgorithm : MonoBehaviour
     public void RunNOpt()
     {
         List<NodeEnt> curRoute = new();
+        List<NodeEnt> lastValidRoute = new();
         GenRandomRoute(curRoute);
         lock(EntMgr.inst.algInfoList[0].bestNodeList)
         {
             EntMgr.inst.SetBestNodes(curRoute);
         }
-        curRouteCost = EvalRoute(curRoute);
+                bool lastisValid = false;
+        curRouteCost = EvalRoute(curRoute, out lastisValid);
         lock(GraphMgr.inst.scores)
         {
             GraphMgr.inst.scores.Add(curRouteCost);
         }
         bool isImproved = true;
+
         while(isImproved)
         {
             isImproved=false;
@@ -83,30 +87,36 @@ public class NOptAlgorithm : MonoBehaviour
                 {
                     List<NodeEnt> newRoute = new(curRoute);
                     newRoute.Reverse(i,j-i);
-                    int newCost = EvalRoute(newRoute);
+                    int newCost = EvalRoute(newRoute, out lastisValid);
+                    
                     if(newCost<curRouteCost)
                     {
                         curRoute=newRoute;
                         isImproved=true;
-                        QueueMainThreadLog("Improvment To"+newCost);
-                        curRouteCost=newCost;
-                        lock(listOfScoresToQueueInMain)
+                        //QueueMainThreadLog("Improvment To"+newCost);
+                        if(lastisValid)
                         {
-                            listOfScoresToQueueInMain.Enqueue(curRouteCost);
+                            curRouteCost=newCost;
+                            lastValidRoute=newRoute;
+                            lock(listOfScoresToQueueInMain)
+                            {
+                                listOfScoresToQueueInMain.Enqueue(curRouteCost);
+                            }
                         }
+                        
                     }
                 }
             }
             lock(EntMgr.inst.algInfoList[0].bestNodeList)
             {
-                EntMgr.inst.SetBestNodes(curRoute);
+                EntMgr.inst.SetBestNodes(lastValidRoute);
             }
             QueueMainThreadFunction(DisplayUpdate);
         }
         QueueMainThreadLog("Value: "+curRouteCost);
     }
 
-    int EvalRoute(List<NodeEnt> nodes)
+    int EvalRoute(List<NodeEnt> nodes, out bool isValid)
     {
         List<int> vehicleSums = new();
         List<int> vehicleCapacities = new();
@@ -158,8 +168,15 @@ public class NOptAlgorithm : MonoBehaviour
         {
             if(vehicleCapacities[i]<0)
                 isOverCapacity=true;
+        }
+        isValid= !isOverCapacity;
+        int sum = 0;
+        foreach (int item in vehicleSums)
+        {
+            sum+=item;
         }     
-        return isOverCapacity?vehicleSums.Max()*10:vehicleSums.Max();
+        return sum;
+        // return vehicleSums.Max();
     }
 
     public void DisplayUpdate()

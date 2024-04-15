@@ -6,10 +6,11 @@ using UnityEditor;
 using UnityEditor.Experimental.AssetImporters;
 using UnityEngine;
 
-[SerializeField]
+
 /// <summary>
 /// Contains the data for the EVRP header
 /// </summary>
+[System.Serializable]
 public struct EVRPData
 {
     public int optimalValue;
@@ -20,9 +21,10 @@ public struct EVRPData
     public int energyCapacity;
     public float energyConsumption;
     public string edgeWeightType;
+    public string type;
 
     public EVRPData(int r_optimalValue=-1,int r_vehicles=-1,int r_dimension=-1
-    ,int r_stations=-1,int r_capacity=-1,int r_energyCapacity=-1,float r_energyConsumption=-1f,string r_edgeWeightType="NAN")
+    ,int r_stations=-1,int r_capacity=-1,int r_energyCapacity=-1,float r_energyConsumption=-1f,string r_edgeWeightType="NAN", string r_type = "NONE")
     {
         optimalValue=r_optimalValue;
         vehicles=r_vehicles;
@@ -32,9 +34,10 @@ public struct EVRPData
         energyCapacity=r_energyCapacity;
         energyConsumption=r_energyConsumption;
         edgeWeightType=r_edgeWeightType;
+        type = r_type;
     }
 
-    public bool isValidData()
+    public bool IsValidData()
     {
         return optimalValue!=-1 && vehicles!=-1 && dimension!=-1 
         && stations!=-1 && capacity!=-1 && energyCapacity!=-1 
@@ -94,7 +97,9 @@ public class EVRPConverter : MonoBehaviour
             return;
         using StringReader reader = new(evrpRawFiles[fileStatus].text);
         string line;
+        string[] chunks;
         LineSection lineSection = LineSection.Dataheader;
+        int offset = 0;
         while ((line = reader.ReadLine()) != null)
         {
             Debug.Log(lineSection.ToString());
@@ -103,12 +108,23 @@ public class EVRPConverter : MonoBehaviour
             switch (lineSection)
             {
             case LineSection.Dataheader:
-                if (line.Contains("NODE_COORD_SECTION"))
+                if(evrpData.type=="CVRP")
+                {
+                    offset=1;
+                }
+                if (line.Contains("TYPE"))
+                {
+                    chunks = line.Split(' ');
+                    if(chunks.Length>=3)
+                        evrpData.type = chunks[2];
+                }
+                else if (line.Contains("NODE_COORD_SECTION"))
                 {
                     lineSection = LineSection.NodeCoordSection;
                     break;
                 }
                 else if (line.Contains("OPTIMAL_VALUE:"))
+                {
                     try
                     {
                         evrpData.optimalValue = int.Parse(line.Substring(15));
@@ -117,21 +133,28 @@ public class EVRPConverter : MonoBehaviour
                     {
                         evrpData.optimalValue = 0;
                     }
-
-                else if (line.Contains("VEHICLES:"))
-                    evrpData.vehicles = int.Parse(line.Substring(10));
-                else if (line.Contains("DIMENSION:"))
-                    evrpData.dimension = int.Parse(line.Substring(11));
-                else if (line.Contains("STATIONS:"))
-                    evrpData.stations = int.Parse(line.Substring(10));
-                else if (line.Contains("ENERGY_CAPACITY:"))
-                    evrpData.energyCapacity = int.Parse(line.Substring(17));
-                else if (line.Contains("CAPACITY:"))
-                    evrpData.capacity = int.Parse(line.Substring(10));
-                else if (line.Contains("ENERGY_CONSUMPTION:"))
-                    evrpData.energyConsumption = float.Parse(line.Substring(20));
-                else if (line.Contains("EDGE_WEIGHT_TYPE:"))
-                    evrpData.edgeWeightType = line.Substring(18);
+                }
+                else if (line.Contains("VEHICLES"))
+                    evrpData.vehicles = int.Parse(line.Substring(10+offset));
+                else if (line.Contains("DIMENSION"))
+                    evrpData.dimension = int.Parse(line.Substring(11+offset));
+                else if (line.Contains("STATIONS"))
+                    evrpData.stations = int.Parse(line.Substring(10+offset));
+                else if (line.Contains("ENERGY_CAPACITY"))
+                    evrpData.energyCapacity = int.Parse(line.Substring(17+offset));
+                else if (line.Contains("CAPACITY"))
+                    evrpData.capacity = int.Parse(line.Substring(10+offset));
+                else if (line.Contains("ENERGY_CONSUMPTION"))
+                    evrpData.energyConsumption = float.Parse(line.Substring(20+offset));
+                else if (line.Contains("EDGE_WEIGHT_TYPE"))
+                    evrpData.edgeWeightType = line.Substring(18+offset);
+                else if (line.Contains("COMMENT :"))
+                {
+                    chunks = line.Split(',');
+                    evrpData.vehicles = int.Parse(chunks[1].Substring(19, chunks[1].Length-19));
+                    evrpData.optimalValue = int.Parse(chunks[2].Substring(16, chunks[2].Length-16-1));
+                }
+                    
                 break;
             case LineSection.NodeCoordSection:
                 if (line.Contains("DEMAND_SECTION"))
@@ -142,7 +165,7 @@ public class EVRPConverter : MonoBehaviour
                 else
                 {
                     Vector3 location = Vector3.zero ;
-                    string[] chunks = line.Split(' ');
+                    chunks = line.Split(' ');
                     if(chunks.Length<3)
                     {
                         Debug.LogError("Invalid Parse");
@@ -162,8 +185,13 @@ public class EVRPConverter : MonoBehaviour
                     lineSection = LineSection.StationCoordSection;
                     break;
                 }
-                string[] demandChunks = line.Split(' ');
-                EntMgr.inst.nodeList[int.Parse(demandChunks[0])-1].demand = int.Parse(demandChunks[1]);
+                else if (line.Contains("DEPOT_SECTION"))
+                {
+                    lineSection = LineSection.DepotSection;
+                    break;
+                }
+                chunks = line.Split(' ');
+                EntMgr.inst.nodeList[int.Parse(chunks[0])-1].demand = int.Parse(chunks[1]);
                 break;
             case LineSection.StationCoordSection:
                 if (line.Contains("DEPOT_SECTION"))
@@ -200,7 +228,7 @@ public class EVRPConverter : MonoBehaviour
             // }
 
         }
-        if (!evrpData.isValidData())
+        if (evrpData.type!= "CVRP" && !evrpData.IsValidData())
         {
             Debug.LogError("Bad Header!");
             return;
@@ -208,8 +236,10 @@ public class EVRPConverter : MonoBehaviour
         float maxLength =0f;
         EntMgr.inst.AddAllPaths();
         if(EntMgr.inst.nodeList.Count!=evrpData.dimension)
-            Debug.LogError("Not Enoguh Nodes");
-        
+        {
+            Debug.LogError("Not Enoguh Nodes!\nNodes: "+EntMgr.inst.nodeList.Count+"\tDimension: "+evrpData.dimension);
+
+        }
         Road longestRoad = new Road(EntMgr.inst.nodeList[0],EntMgr.inst.nodeList[1]);
         foreach(var singlePath in EntMgr.inst.roadDict)
         {
