@@ -319,10 +319,18 @@ public class EntMgr : MonoBehaviour
 
     public void CreatePathLine()
     {
+        int count = 0;
         multiLineRendererList[0].positionCount=algInfoList[0].bestNodeList.Count;
         for(int i = 0; i<algInfoList[0].bestNodeList.Count;i++)
         {
-            multiLineRendererList[0].SetPosition(i,algInfoList[0].bestNodeList[i].transform.position + new Vector3(0,0,2));
+            if((i>0 && algInfoList[0].bestNodeList[i]==algInfoList[0].bestNodeList[i-1]) 
+            || (i==algInfoList[0].bestNodeList.Count-1 && algInfoList[0].bestNodeList[^1]==algInfoList[0].bestNodeList[0]))
+            {
+                multiLineRendererList[0].positionCount--;
+                continue;
+            }
+            multiLineRendererList[0].SetPosition(count,algInfoList[0].bestNodeList[i].transform.position + new Vector3(0,0,2));
+            count++;
         }
     }
 
