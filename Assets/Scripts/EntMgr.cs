@@ -4,6 +4,8 @@ using UnityEngine;
 using System.Threading;
 using Unity.VisualScripting;
 using UnityEditor.PackageManager;
+using System.Security.Cryptography;
+using System.Linq;
 
 [System.Serializable]
 public struct Road
@@ -175,7 +177,7 @@ public struct Route
         return base.GetHashCode();
     }
 }
-
+[System.Serializable]
 public struct AlgorithmInfo
 {
     public int index;
@@ -234,13 +236,28 @@ public class EntMgr : MonoBehaviour
         {
             new AlgorithmInfo(0)
         };
-        algInfoList[0].Start();
         roadDict = new Map<Road, int>
         {
             DefaultValue = -1
         };
         GraphMgr.inst.StartGraph();
         listOFunctionsToRunInMain = new Queue<System.Action>();
+    }
+
+    public void MultiLineInitalization(int count)
+    {
+        for(int i = 0;i<multiLineRendererList.Count;i++)
+        {
+            Destroy(multiLineRendererList[i].gameObject);
+        }
+        multiLineRendererList.Clear();
+        algInfoList.Clear();
+        for(int i = 0; i < count;i++)
+        {
+            multiLineRendererList.Add(Instantiate(lineRendPrefab,Vector3.zero,Quaternion.identity,lineRendContainer).GetComponent<LineRenderer>());
+            algInfoList.Add(new AlgorithmInfo(i));
+        }
+        
     }
 
     // Update is called once per frame
@@ -277,25 +294,53 @@ public class EntMgr : MonoBehaviour
         nodeList.Add(newNode);
     }
 
-    public int ColorSplit(ref List<List<NodeEnt>> colorSepatatedNodeList)
+    public int ColorSplit(ref List<List<NodeEnt>> colorSepatatedNodeList, ref List<int> vehicleSplit)
     {
         colorSepatatedNodeList.Clear();
+        vehicleSplit.Clear();
         List<Color> colors = new();
+        List<int> colorSizes = new();
         foreach(NodeEnt singleNode in nodeList)
         {
-            if(!colors.Contains(singleNode.myColor))
+            if(!colors.Contains(singleNode.myColor) && singleNode.nodeType != NodeType.Depot)
                 colors.Add(singleNode.myColor);
         }
+        Debug.Log(colors.Count);
         for(int i = 0; i < colors.Count; i++)
         {
-            colorSepatatedNodeList.Add(new());
+            colorSepatatedNodeList.Add(new List<NodeEnt>());
+            colorSizes.Add(0);
         }
         foreach(NodeEnt singleNode in nodeList)
         {
+            if(singleNode.nodeType == NodeType.Depot)
+                continue;
+
             int index = colors.IndexOf(singleNode.myColor);
             colorSepatatedNodeList[index].Add(singleNode);
+            colorSizes[index]++;
         }
-        //if(colors.Count>EVRPConverter.inst.evrpData.vehicles)
+        
+        int totalVehicles = EVRPConverter.inst.evrpData.vehicles;
+        for(int i = 0;i<totalVehicles;i++)
+        {
+            vehicleSplit.Add(0);
+        }
+        
+        int porportionalAmmount = nodeList.Count/totalVehicles;
+        for(int i = 0;i<colors.Count;i++)
+        {
+            vehicleSplit[i]++;
+            totalVehicles--;
+        }
+
+        while(totalVehicles>0)
+        {
+            int temp = colorSizes.IndexOf(colorSizes.Max());
+            colorSizes[temp] -= porportionalAmmount;
+            vehicleSplit[temp]++;
+            totalVehicles--;
+        }
 
         return colors.Count;
     }   
@@ -335,9 +380,11 @@ public class EntMgr : MonoBehaviour
     
     public void UpdateLineSize(float size)
     {
-        multiLineRendererList[0].startWidth=.02f*size;
-        multiLineRendererList[0].endWidth=.02f*size;
-        
+        foreach (var line in multiLineRendererList)
+        {
+            line.startWidth=.02f*size;
+            line.endWidth=.02f*size;
+        }        
     }
 
     public void CreatePathLine(int lineIndex = 0)
@@ -347,7 +394,7 @@ public class EntMgr : MonoBehaviour
         for(int i = 0; i<algInfoList[lineIndex].bestNodeList.Count;i++)
         {
             if((i>0 && algInfoList[lineIndex].bestNodeList[i]==algInfoList[lineIndex].bestNodeList[i-1]) 
-            || (i==algInfoList[lineIndex].bestNodeList.Count-1 && algInfoList[lineIndex].bestNodeList[^1]==algInfoList[0].bestNodeList[0]))
+            || (i==algInfoList[lineIndex].bestNodeList.Count-1 && algInfoList[lineIndex].bestNodeList[^1]==algInfoList[lineIndex].bestNodeList[0]))
             {
                 multiLineRendererList[lineIndex].positionCount--;
                 continue;

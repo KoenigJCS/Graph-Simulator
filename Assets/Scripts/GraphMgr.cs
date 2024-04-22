@@ -6,7 +6,6 @@ public class GraphMgr : MonoBehaviour
 {
     public GameObject graphPanel;
     public Camera cam;
-    public LineRenderer lineRender;
     public LineGraph lineGraph;
     static float MAX_X = 165f;
     public TMPro.TextMeshProUGUI yText;
@@ -50,8 +49,6 @@ public class GraphMgr : MonoBehaviour
     {
         graphPanel.SetActive(true);
         lineGraph.SetAllDirty();
-        // lineRender.gameObject.SetActive(true);
-        // lineRender.positionCount=0;
     }
     public void UpdateGraph()
     {
