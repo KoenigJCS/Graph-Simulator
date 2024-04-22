@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
 public class SelectionMgr : MonoBehaviour
@@ -31,17 +32,21 @@ public class SelectionMgr : MonoBehaviour
         //Selecting
             if(Input.GetMouseButtonDown(0) && !PlacementMgr.inst.IsMouseOverUI())
             {
-                UnselectAll();
+                if(!Input.GetKey(KeyCode.LeftShift))
+                    UnselectAll();
+
                 isSelecting = true;
                 mousePos1 = Input.mousePosition;
             }
         }
         if(Input.GetMouseButtonUp(0) && !PlacementMgr.inst.IsMouseOverUI())
         {
-            selectedNodes.Clear();
+            if(!Input.GetKey(KeyCode.LeftShift))
+                selectedNodes.Clear();
+
             foreach(NodeEnt ent in EntMgr.inst.nodeList)
             {
-                if(InSelectedZone(ent.transform.position))
+                if(InSelectedZone(ent.transform.position) && !selectedNodes.Contains(ent))
                 {
                     selectedNodes.Add(ent);
                     ent.SetSelected(true);
@@ -102,6 +107,15 @@ public class SelectionMgr : MonoBehaviour
                 break;
             case 3:
                 pickedColor=Color.blue;
+                break;
+            case 4:
+                pickedColor=Color.yellow;
+                break;
+            case 5:
+                pickedColor=Color.cyan;
+                break;
+            case 6:
+                pickedColor=Color.white;
                 break;
             default:
                 pickedColor=Color.white;

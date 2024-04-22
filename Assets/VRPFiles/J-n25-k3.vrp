@@ -1,5 +1,5 @@
 NAME : J-n-25-k3.vrp
-COMMENT : (Jude, Min no of trucks: 3, Optimal value: 1600)
+COMMENT : (Jude, Min no of trucks: 3, Optimal value: 254)
 TYPE : CVRP
 DIMENSION : 25
 EDGE_WEIGHT_TYPE : EUC_2D

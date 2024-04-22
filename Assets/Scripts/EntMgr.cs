@@ -277,6 +277,29 @@ public class EntMgr : MonoBehaviour
         nodeList.Add(newNode);
     }
 
+    public int ColorSplit(ref List<List<NodeEnt>> colorSepatatedNodeList)
+    {
+        colorSepatatedNodeList.Clear();
+        List<Color> colors = new();
+        foreach(NodeEnt singleNode in nodeList)
+        {
+            if(!colors.Contains(singleNode.myColor))
+                colors.Add(singleNode.myColor);
+        }
+        for(int i = 0; i < colors.Count; i++)
+        {
+            colorSepatatedNodeList.Add(new());
+        }
+        foreach(NodeEnt singleNode in nodeList)
+        {
+            int index = colors.IndexOf(singleNode.myColor);
+            colorSepatatedNodeList[index].Add(singleNode);
+        }
+        //if(colors.Count>EVRPConverter.inst.evrpData.vehicles)
+
+        return colors.Count;
+    }   
+
     public void CleanUpAll()
     {
         for(int i=0;i<nodeList.Count;i++)
@@ -317,32 +340,35 @@ public class EntMgr : MonoBehaviour
         
     }
 
-    public void CreatePathLine()
+    public void CreatePathLine(int lineIndex = 0)
     {
         int count = 0;
-        multiLineRendererList[0].positionCount=algInfoList[0].bestNodeList.Count;
-        for(int i = 0; i<algInfoList[0].bestNodeList.Count;i++)
+        multiLineRendererList[lineIndex].positionCount=algInfoList[lineIndex].bestNodeList.Count;
+        for(int i = 0; i<algInfoList[lineIndex].bestNodeList.Count;i++)
         {
-            if((i>0 && algInfoList[0].bestNodeList[i]==algInfoList[0].bestNodeList[i-1]) 
-            || (i==algInfoList[0].bestNodeList.Count-1 && algInfoList[0].bestNodeList[^1]==algInfoList[0].bestNodeList[0]))
+            if((i>0 && algInfoList[lineIndex].bestNodeList[i]==algInfoList[lineIndex].bestNodeList[i-1]) 
+            || (i==algInfoList[lineIndex].bestNodeList.Count-1 && algInfoList[lineIndex].bestNodeList[^1]==algInfoList[0].bestNodeList[0]))
             {
-                multiLineRendererList[0].positionCount--;
+                multiLineRendererList[lineIndex].positionCount--;
                 continue;
             }
-            multiLineRendererList[0].SetPosition(count,algInfoList[0].bestNodeList[i].transform.position + new Vector3(0,0,2));
+            multiLineRendererList[lineIndex].SetPosition(count,algInfoList[lineIndex].bestNodeList[i].transform.position + new Vector3(0,0,2));
             count++;
         }
     }
 
-    public void SetBestNodes(List<NodeEnt> newNodeList)
+    public void SetBestNodes(List<NodeEnt> newNodeList, int algIndex = 0)
     {
-        algInfoList[0] = new(algInfoList[0].index,newNodeList);
+        algInfoList[algIndex] = new(algInfoList[algIndex].index,newNodeList);
     }
 
-    public void SetUpForAlgorithm()
+    public void SetUpForAlgorithm(int lineCount = 1)
     {
         roadDict.Clear();
-        multiLineRendererList[0].positionCount=0;
+        foreach (var LineRenderer in multiLineRendererList)
+        {
+            LineRenderer.positionCount=0;
+        }
         //SETUP PHASE
         if(algSeed!=0)
                 UnityEngine.Random.InitState(algSeed);
