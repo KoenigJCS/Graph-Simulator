@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,9 +13,8 @@ public class NOptAlgorithm : MonoBehaviour
     public bool t1RunFlag = false;
     Queue<System.Action> listOFunctionsToRunInMain;
     Queue<string> listOfStringsToLogInMain;
-    Queue<int> listOfScoresToQueueInMain;
     public List<Thread> threads;
-    int curRouteCost=int.MaxValue;
+    //int curRouteCost=int.MaxValue;
 
     private static int _tracker = 0;
     private static ThreadLocal<System.Random> _random = new ThreadLocal<System.Random>(() => {
@@ -27,7 +27,6 @@ public class NOptAlgorithm : MonoBehaviour
     {
         listOFunctionsToRunInMain = new Queue<System.Action>();
         listOfStringsToLogInMain = new();
-        listOfScoresToQueueInMain = new();
         threads = new();
         for(int i=0; i<6;i++)
         {
@@ -71,32 +70,35 @@ public class NOptAlgorithm : MonoBehaviour
 
     public void RunNOptColoring(int index)
     {
-        List<NodeEnt> curRoute = new();
         List<NodeEnt> lastValidRoute = new();
+        int lastValidRouteCost = int.MaxValue;
+        int curRouteCost = int.MaxValue;
         List<NodeEnt> colorNodeList;
         if(index==-1)   
         {
             Debug.LogError("ColoringError!");
             return;
         }
-        Debug.Log(index);
+        //Debug.Log(index);
         colorNodeList = colorSepatatedNodeList[index];
-        GenRandomRoute(curRoute, ref colorNodeList, vehicleSplit[index]);
-
-        lock(EntMgr.inst.algInfoList[index].bestNodeList)
-        {
-            EntMgr.inst.SetBestNodes(curRoute, index);
-        }
-        curRouteCost = EvalRoute(ref curRoute, out bool lastisValid);
-        lock (GraphMgr.inst.scores)
-        {
-            GraphMgr.inst.scores.Add(curRouteCost);
-        }
+        List<NodeEnt> curRoute = new();    
         bool isImproved = true;
+        bool lastisValid = false;
+        bool foundValidRoute = false;
 
         while(isImproved)
         {
-            isImproved=false;
+            if(foundValidRoute)
+                isImproved=false;
+            else
+            {
+                curRoute.Clear();
+                GenRandomRoute(curRoute, ref colorNodeList, vehicleSplit[index]);
+                EntMgr.inst.SetBestNodes(curRoute, index);
+                curRouteCost = EvalRoute(ref curRoute, out lastisValid);
+                curScores[index] = curRouteCost;
+            }
+            
             for(int i = 1;i<curRoute.Count-1;i++)
             {
                 for(int j = i+1;j<curRoute.Count;j++)
@@ -104,57 +106,72 @@ public class NOptAlgorithm : MonoBehaviour
                     List<NodeEnt> newRoute = new(curRoute);
                     newRoute.Reverse(i,j-i+1);
                     int newCost = EvalRoute(ref newRoute, out lastisValid);
-                    
-                    if(newCost>=curRouteCost)
+                    if(lastisValid && !foundValidRoute)
+                    {
+                        curRoute=newRoute;
+                        isImproved=true;
+                        curRouteCost=newCost;
+
+                        foundValidRoute = true;
+                        lastValidRouteCost=newCost;
+                        lastValidRoute=newRoute;
+                        curScores[index]=newCost;
                         continue;
-                    
-                    curRoute=newRoute;
-                    isImproved=true;
-                    
-                    if(!lastisValid)
+                    }
+                    else if(!lastisValid || newCost>=curRouteCost)
                         continue;
 
+                    curRoute=newRoute;
+                    isImproved=true;
                     curRouteCost=newCost;
+
+                    foundValidRoute=true;
+                    lastValidRouteCost=newCost;
                     lastValidRoute=newRoute;
-                    lock(curScores)
-                    {
-                        curScores[index] = newCost;
-                    }
+                    curScores[index]=newCost;
+                    //string temp1 = "Thread at: "+index+"\tImproved To:"+newCost;
+                    //Debug.Log(String.Intern(temp1));
                 }
             }
-            lock(EntMgr.inst.algInfoList[index].bestNodeList)
-            {
+            if(lastValidRouteCost!=int.MaxValue)
                 EntMgr.inst.SetBestNodes(lastValidRoute, index);
-            }
+            else
+                EntMgr.inst.SetBestNodes(curRoute,index);
+            
             QueueMainThreadFunction(DisplayUpdate);
         }
-        QueueMainThreadLog("Value: "+curRouteCost);
+        string temp0 = "Value: "+lastValidRouteCost+" at Index: "+index;
+        QueueMainThreadLog(String.Intern(temp0));
     }
 
     public void RunNOpt()
     {
         List<NodeEnt> curRoute = new();
         List<NodeEnt> lastValidRoute = new();
-        if(SelectionMgr.inst.selectedNodes.Count>2)
-            GenRandomRoute(curRoute, ref SelectionMgr.inst.selectedNodes, EVRPConverter.inst.evrpData.vehicles);
-        else
-            GenRandomRoute(curRoute, ref EntMgr.inst.nodeList, EVRPConverter.inst.evrpData.vehicles);
-
-        lock(EntMgr.inst.algInfoList[0].bestNodeList)
-        {
-            EntMgr.inst.SetBestNodes(curRoute, 0);
-        }
-        bool lastisValid = false;
-        curRouteCost = EvalRoute(ref curRoute, out lastisValid);
-        lock(GraphMgr.inst.scores)
-        {
-            GraphMgr.inst.scores.Add(curRouteCost);
-        }
+        int lastValidRouteCost = int.MaxValue;
+        int curRouteCost = int.MaxValue;
+        
         bool isImproved = true;
+        bool foundValidRoute = false;
+        bool lastisValid = false;
 
         while(isImproved)
         {
-            isImproved=false;
+            if(foundValidRoute)
+                isImproved=false;
+            else
+            {
+                curRoute.Clear();
+                if(SelectionMgr.inst.selectedNodes.Count>2)
+                    GenRandomRoute(curRoute, ref SelectionMgr.inst.selectedNodes, EVRPConverter.inst.evrpData.vehicles);
+                else
+                    GenRandomRoute(curRoute, ref EntMgr.inst.nodeList, EVRPConverter.inst.evrpData.vehicles);
+                
+                EntMgr.inst.SetBestNodes(curRoute, 0);
+                curRouteCost = EvalRoute(ref curRoute, out lastisValid);
+                curScores[0]=curRouteCost;
+            }
+            
             for(int i = 1;i<curRoute.Count-1;i++)
             {
                 for(int j = i+1;j<curRoute.Count;j++)
@@ -162,31 +179,40 @@ public class NOptAlgorithm : MonoBehaviour
                     List<NodeEnt> newRoute = new(curRoute);
                     newRoute.Reverse(i,j-i+1);
                     int newCost = EvalRoute(ref newRoute, out lastisValid);
-                    
-                    if(newCost>=curRouteCost)
+                    if(lastisValid && !foundValidRoute)
+                    {
+                        curRoute=newRoute;
+                        isImproved=true;
+                        curRouteCost=newCost;
+
+                        foundValidRoute = true;
+                        lastValidRouteCost=newCost;
+                        lastValidRoute=newRoute;
+                        curScores[0]=newCost;
+                        continue;
+                    }
+                    else if(!lastisValid || newCost>=curRouteCost)
                         continue;
 
                     curRoute=newRoute;
                     isImproved=true;
-
-                    if(!lastisValid)
-                        continue;
-
                     curRouteCost=newCost;
+
+                    foundValidRoute=true;
+                    lastValidRouteCost=newCost;
                     lastValidRoute=newRoute;
-                    lock(curScores)
-                    {
-                        curScores[0]=newCost;    
-                    }   
+                    curScores[0]=newCost;
+                    //Debug.Log("Thread at: "+0+"\tImproved To:"+newCost);
                 }
             }
-            lock(EntMgr.inst.algInfoList[0].bestNodeList)
-            {
+            if(lastValidRouteCost!=int.MaxValue)
                 EntMgr.inst.SetBestNodes(lastValidRoute, 0);
-            }
+            else
+                EntMgr.inst.SetBestNodes(curRoute,0);
+            
             QueueMainThreadFunction(DisplayUpdate);
         }
-        QueueMainThreadLog("Value: "+curRouteCost);
+        QueueMainThreadLog("Value: "+lastValidRouteCost);
     }
 
     int EvalRoute(ref List<NodeEnt> nodes, out bool isValid)
@@ -275,7 +301,9 @@ public class NOptAlgorithm : MonoBehaviour
         }
 
         int newScore = CalculateNewScore();
-        if(GraphMgr.inst.scores[^1]!=newScore)
+        if(GraphMgr.inst.scores.Count==0)
+            GraphMgr.inst.scores.Add(newScore);
+        else if(GraphMgr.inst.scores[^1]!=newScore)
             GraphMgr.inst.scores.Add(newScore);
         GraphMgr.inst.UpdateGraph();
     }
@@ -325,8 +353,11 @@ public class NOptAlgorithm : MonoBehaviour
             {
                 int temp = i;
                 threads.Add(new Thread(() => RunNOptColoring(temp)) {Name = "Thread "+temp});
-                threads[i].Start();
             }
+            for(int i = 0;i < colorCount; i++)
+            {
+                threads[i].Start();
+            }   
         }
     }
 

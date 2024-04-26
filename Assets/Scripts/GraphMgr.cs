@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class GraphMgr : MonoBehaviour
@@ -13,7 +14,7 @@ public class GraphMgr : MonoBehaviour
     static float MAX_Y = 100f;
     float maxScore;
     float minScore;
-    public List<int> scores;
+    public List<int> scores = new();
     public static GraphMgr inst;
     Vector3 startPos;
     Vector3 startScale;
@@ -37,14 +38,6 @@ public class GraphMgr : MonoBehaviour
         
     }
 
-    void OnGUI()
-    {
-        // lineRender.transform.localScale= startScale*(cam.orthographicSize/7.25f);
-        // lineRender.transform.localPosition=startPos*(cam.orthographicSize/7.25f);
-        // lineRender.startWidth=.2f*(cam.orthographicSize/7.25f);
-        // lineRender.endWidth=.2f*(cam.orthographicSize/7.25f);
-    }
-
     public void StartGraph()
     {
         graphPanel.SetActive(true);
@@ -58,8 +51,8 @@ public class GraphMgr : MonoBehaviour
             lineGraph.SetAllDirty();
             //lineRender.positionCount=scores.Count;
             //Note that I'm assuming the first score will always be the highest
-            maxScore=scores[0];
-            minScore=scores[^1];
+            maxScore=scores.Max();
+            minScore=scores.Min();
             for(int i = 0; i<scores.Count;i++)
             {
                 lineGraph.dataPoints.Add(new Vector2(i / (float)(scores.Count-1)*MAX_X,(float)(scores[i]-minScore)/(maxScore-minScore)*MAX_Y));

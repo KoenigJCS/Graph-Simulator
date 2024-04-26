@@ -102,7 +102,7 @@ public class EVRPConverter : MonoBehaviour
         int offset = 0;
         while ((line = reader.ReadLine()) != null)
         {
-            Debug.Log(lineSection.ToString());
+            //Debug.Log(lineSection.ToString());
             if (line == "EOF")
                 break;
             switch (lineSection)

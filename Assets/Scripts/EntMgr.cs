@@ -299,17 +299,17 @@ public class EntMgr : MonoBehaviour
         colorSepatatedNodeList.Clear();
         vehicleSplit.Clear();
         List<Color> colors = new();
-        List<int> colorSizes = new();
+        List<int> colorDemand = new();
         foreach(NodeEnt singleNode in nodeList)
         {
             if(!colors.Contains(singleNode.myColor) && singleNode.nodeType != NodeType.Depot)
                 colors.Add(singleNode.myColor);
         }
-        Debug.Log(colors.Count);
+        //Debug.Log(colors.Count);
         for(int i = 0; i < colors.Count; i++)
         {
             colorSepatatedNodeList.Add(new List<NodeEnt>());
-            colorSizes.Add(0);
+            colorDemand.Add(0);
         }
         foreach(NodeEnt singleNode in nodeList)
         {
@@ -318,7 +318,7 @@ public class EntMgr : MonoBehaviour
 
             int index = colors.IndexOf(singleNode.myColor);
             colorSepatatedNodeList[index].Add(singleNode);
-            colorSizes[index]++;
+            colorDemand[index]+=singleNode.demand;
         }
         
         int totalVehicles = EVRPConverter.inst.evrpData.vehicles;
@@ -327,17 +327,23 @@ public class EntMgr : MonoBehaviour
             vehicleSplit.Add(0);
         }
         
-        int porportionalAmmount = nodeList.Count/totalVehicles;
+        int porportionalAmmount = colorDemand.Sum()/totalVehicles;
         for(int i = 0;i<colors.Count;i++)
         {
-            vehicleSplit[i]++;
-            totalVehicles--;
+            int minCars = (int)Mathf.Ceil(colorDemand[i] / (float)(EVRPConverter.inst.evrpData.capacity+1));
+            minCars = minCars==0?1:minCars;
+            vehicleSplit[i]+=minCars;
+            totalVehicles-=minCars;
+        }
+        if(totalVehicles<0)
+        {
+            Debug.LogError("Impossible Color Grouping");
         }
 
         while(totalVehicles>0)
         {
-            int temp = colorSizes.IndexOf(colorSizes.Max());
-            colorSizes[temp] -= porportionalAmmount;
+            int temp = colorDemand.IndexOf(colorDemand.Max());
+            colorDemand[temp] -= porportionalAmmount;
             vehicleSplit[temp]++;
             totalVehicles--;
         }
@@ -390,23 +396,29 @@ public class EntMgr : MonoBehaviour
     public void CreatePathLine(int lineIndex = 0)
     {
         int count = 0;
-        multiLineRendererList[lineIndex].positionCount=algInfoList[lineIndex].bestNodeList.Count;
-        for(int i = 0; i<algInfoList[lineIndex].bestNodeList.Count;i++)
+        lock(algInfoList[lineIndex].bestNodeList)
         {
-            if((i>0 && algInfoList[lineIndex].bestNodeList[i]==algInfoList[lineIndex].bestNodeList[i-1]) 
-            || (i==algInfoList[lineIndex].bestNodeList.Count-1 && algInfoList[lineIndex].bestNodeList[^1]==algInfoList[lineIndex].bestNodeList[0]))
+            multiLineRendererList[lineIndex].positionCount=algInfoList[lineIndex].bestNodeList.Count;
+            for(int i = 0; i<algInfoList[lineIndex].bestNodeList.Count;i++)
             {
-                multiLineRendererList[lineIndex].positionCount--;
-                continue;
+                // if((i>0 && algInfoList[lineIndex].bestNodeList[i]==algInfoList[lineIndex].bestNodeList[i-1]) 
+                // || (i==algInfoList[lineIndex].bestNodeList.Count-1 && algInfoList[lineIndex].bestNodeList[^1]==algInfoList[lineIndex].bestNodeList[0]))
+                // {
+                //     multiLineRendererList[lineIndex].positionCount--;
+                //     continue;
+                // }
+                multiLineRendererList[lineIndex].SetPosition(count,algInfoList[lineIndex].bestNodeList[i].transform.position + new Vector3(0,0,2));
+                count++;
             }
-            multiLineRendererList[lineIndex].SetPosition(count,algInfoList[lineIndex].bestNodeList[i].transform.position + new Vector3(0,0,2));
-            count++;
         }
     }
 
     public void SetBestNodes(List<NodeEnt> newNodeList, int algIndex = 0)
     {
-        algInfoList[algIndex] = new(algInfoList[algIndex].index,newNodeList);
+        lock(algInfoList)
+        {
+            algInfoList[algIndex] = new(algIndex,newNodeList);
+        }
     }
 
     public void SetUpForAlgorithm(int lineCount = 1)
