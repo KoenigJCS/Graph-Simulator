@@ -161,6 +161,7 @@ public class NOptAlgorithm : MonoBehaviour
                 isImproved=false;
             else
             {
+                // isImproved=false;
                 curRoute.Clear();
                 if(SelectionMgr.inst.selectedNodes.Count>2)
                     GenRandomRoute(curRoute, ref SelectionMgr.inst.selectedNodes, EVRPConverter.inst.evrpData.vehicles);
@@ -177,6 +178,9 @@ public class NOptAlgorithm : MonoBehaviour
                 for(int j = i+1;j<curRoute.Count;j++)
                 {
                     List<NodeEnt> newRoute = new(curRoute);
+                    // NodeEnt temp = newRoute[i];
+                    // newRoute[i] = newRoute[j];
+                    // newRoute[j] = temp;
                     newRoute.Reverse(i,j-i+1);
                     int newCost = EvalRoute(ref newRoute, out lastisValid);
                     if(lastisValid && !foundValidRoute)
