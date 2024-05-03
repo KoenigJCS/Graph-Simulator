@@ -7,8 +7,8 @@
 5. Threading
 6. Vehicle Apportionment
 7. Evaluation
-8. Key Code Chunks
-9. Notes
+8. Notes
+9. Key Code Chunks
 
 ## Summary
 This is a visualization tool meant to make it easier to work on and implement algorithms for node based problems such as the TSP (traveling salesman problem) and the CVRP. There are a large number of predesigned nodal problems saved that can be loaded into the scene. Then an evaluation heuristic can be selected to attempt to “solve” the nodes in the visualiser, the user can modify the parameters and location of the nodes while they are in the visualizer to change the details of the simulation. Then as the evaluation runs in processes solutions are sent to be visualized and graphed for the user to see. See diagram below.
@@ -43,6 +43,12 @@ Vehicles are divided using an algorithm similar to the US Senate seat division, 
 
 ## Evaluation
 Once this algorithm is running, 2 opt progresses as normal, however only "valid" (meaning that no vehicle is over capacity) routes are accepted as successful improvement, once a successful improvement is found the best track is updated and improvement is marked down. If all possible reversals are iterated through without an improvement the algorithm ends, otherwise it restarts and continues the search. The exception to this is if the initial string never finds a valid route, in which case the program simply generates a new random starting seed and tries again. 
+
+## Notes
+1. Certain problems have extremely tight solving parameters and can be very difficult to manually cluster
+2. If the set of valid paths is extremely small it may take a large amount of time for the program to find them
+3. A few of the .vrp and .cvrp files don't parse correctly as they are non-standard
+4. Hill Climbing doesn't currently work 
 
 ## Key Code Chunks
 ### Color Clustering + Vehicle Apportionment
